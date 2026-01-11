@@ -416,25 +416,18 @@
             
             // Đảm bảo terminal chiếm toàn bộ không gian
             const doFit = () => {
-                if (!term || !fitAddon || !container.offsetParent) return;
+                if (!term || !fitAddon) return;
+                const container = document.getElementById('terminal');
+                if (!container || !container.offsetParent || container.clientWidth === 0) return;
+
                 try { 
-                    // Kiểm tra xem renderer đã sẵn sàng chưa bằng cách check dimensions
-                    if (term._core && 
-                        term._core._renderService && 
-                        term._core._renderService.dimensions &&
-                        term._core.viewport && 
-                        term._core.viewport.scrollBarWidth !== undefined
-                    ) {
-                        fitAddon.fit(); 
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
-                        }
-                    } else {
-                        // console.warn("RenderService or Viewport not ready for fit");
-                        // Retry silently a few times if needed, or rely on the scheduled timeouts
+                    fitAddon.fit(); 
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
                     }
                 } catch(e) {
-                    console.warn("Fit failed", e);
+                    // Nếu fit thất bại (do xterm chưa sẵn sàng viewport), thử lại sau
+                    setTimeout(doFit, 100);
                 }
             };
 
