@@ -392,6 +392,8 @@
                 }
             };
 
+            term.open(container);
+
             if (requestedRenderer === 'dom') {
                 console.log("Forcing DOM renderer");
             } else if (requestedRenderer === 'canvas') {
@@ -411,21 +413,25 @@
                     console.log("Using standard DOM renderer");
                 }
             }
-
-            term.open(container);
             
             // Đảm bảo terminal chiếm toàn bộ không gian
             const doFit = () => {
                 if (!term || !fitAddon || !container.offsetParent) return;
                 try { 
                     // Kiểm tra xem renderer đã sẵn sàng chưa bằng cách check dimensions
-                    if (term._core && term._core._renderService && term._core._renderService.dimensions) {
+                    if (term._core && 
+                        term._core._renderService && 
+                        term._core._renderService.dimensions &&
+                        term._core.viewport && 
+                        term._core.viewport.scrollBarWidth !== undefined
+                    ) {
                         fitAddon.fit(); 
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
                         }
                     } else {
-                        console.warn("RenderService not ready for fit");
+                        // console.warn("RenderService or Viewport not ready for fit");
+                        // Retry silently a few times if needed, or rely on the scheduled timeouts
                     }
                 } catch(e) {
                     console.warn("Fit failed", e);
