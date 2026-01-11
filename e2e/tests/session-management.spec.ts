@@ -58,4 +58,27 @@ test.describe('Session Management', () => {
     await expect(page.locator('#terminal-view')).toBeVisible();
     await expect(page.locator('#current-session-id')).toHaveText(ENTER_SESSION);
   });
+
+  test('should hide active sessions section when no sessions exist', async ({ page }) => {
+    await page.goto('/');
+    
+    // Initially, there should be no sessions in the isolated backend
+    await expect(page.locator('#active-sessions-section')).toBeHidden();
+    
+    // Create one
+    await page.fill('#new-session-name', 'temp-session');
+    await page.click('button:has-text("Create Session")');
+    
+    // Go back to dashboard
+    await page.click('button[title="Exit Session"]');
+    await expect(page.locator('#active-sessions-section')).toBeVisible();
+    
+    // Delete it
+    page.on('dialog', dialog => dialog.accept());
+    const deleteButton = page.locator('#session-list button').first();
+    await deleteButton.click();
+    
+    // Section should be hidden again
+    await expect(page.locator('#active-sessions-section')).toBeHidden();
+  });
 });
