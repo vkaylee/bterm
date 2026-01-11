@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="./assets/xterm.css" />
     <script src="./assets/xterm.js"></script>
     <script src="./assets/xterm-addon-fit.js"></script>
+    <script src="./assets/xterm-addon-webgl.js"></script>
     <script src="./assets/xterm-addon-canvas.js"></script>
     <style>
         @font-face {
@@ -342,22 +343,73 @@
 
             term.loadAddon(fitAddon);
             
-            // Kích hoạt Canvas Renderer để tăng hiệu suất (trừ khi bị force DOM qua URL)
+            // Multi-tier Renderer Fallback: WebGL -> Canvas -> DOM
             const urlParams = new URLSearchParams(window.location.search);
-            const forceDom = urlParams.get('renderer') === 'dom';
+            const requestedRenderer = urlParams.get('renderer'); // webgl, canvas, dom
             
-            if (!forceDom) {
+            const supportsWebgl = () => {
                 try {
-                    // Check if CanvasAddon is the class itself or a namespace
-                    const AddonConstructor = (typeof CanvasAddon === 'function') ? CanvasAddon : CanvasAddon.CanvasAddon;
-                    const canvasAddon = new AddonConstructor();
-                    term.loadAddon(canvasAddon);
-                    console.log("Canvas renderer enabled");
+                    const canvas = document.createElement('canvas');
+                    return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('webgl2')));
+                } catch (e) { return false; }
+            };
+
+            const supportsCanvas = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    return !!(canvas.getContext('2d'));
+                } catch (e) { return false; }
+            };
+
+            const enableWebgl = () => {
+                try {
+                    const AddonConstructor = (typeof WebglAddon === 'function') ? WebglAddon : WebglAddon.WebglAddon;
+                    const addon = new AddonConstructor();
+                    addon.onContextLoss(() => {
+                        console.warn("WebGL context lost, falling back to Canvas");
+                        addon.dispose();
+                        enableCanvas();
+                    });
+                    term.loadAddon(addon);
+                    console.log("WebGL renderer enabled");
+                    return true;
                 } catch (e) {
-                    console.warn("Canvas addon failed to load, falling back to DOM renderer", e);
+                    console.warn("WebGL addon failed:", e.message);
+                    return false;
                 }
+            };
+
+            const enableCanvas = () => {
+                try {
+                    const AddonConstructor = (typeof CanvasAddon === 'function') ? CanvasAddon : CanvasAddon.CanvasAddon;
+                    const addon = new AddonConstructor();
+                    term.loadAddon(addon);
+                    console.log("Canvas renderer enabled");
+                    return true;
+                } catch (e) {
+                    console.warn("Canvas addon failed:", e.message);
+                    return false;
+                }
+            };
+
+            if (requestedRenderer === 'dom') {
+                console.log("Forcing DOM renderer");
+            } else if (requestedRenderer === 'canvas') {
+                if (supportsCanvas()) enableCanvas();
+                else console.log("Canvas not supported, using DOM");
+            } else if (requestedRenderer === 'webgl') {
+                if (supportsWebgl()) enableWebgl();
+                else if (supportsCanvas()) enableCanvas();
+                else console.log("WebGL/Canvas not supported, using DOM");
             } else {
-                console.log("Forcing DOM renderer via URL parameter");
+                // Default: Try WebGL -> Canvas -> DOM
+                if (supportsWebgl() && enableWebgl()) {
+                    // Succeeded
+                } else if (supportsCanvas() && enableCanvas()) {
+                    // Succeeded
+                } else {
+                    console.log("Using standard DOM renderer");
+                }
             }
 
             term.open(container);

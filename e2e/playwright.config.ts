@@ -37,14 +37,23 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
+      name: 'WebGL',
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=webgl` : undefined,
+      },
+    },
+    {
       name: 'Canvas',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=canvas` : undefined,
+      },
     },
     {
       name: 'DOM-Fallback',
       use: { 
         ...devices['Desktop Chrome'],
-        // This will be appended to URLs in page.goto('/')
         baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=dom` : undefined,
       },
     },
