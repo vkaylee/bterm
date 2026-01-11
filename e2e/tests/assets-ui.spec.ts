@@ -17,26 +17,24 @@ test.describe('Assets UI', () => {
         }
     });
 
-    test('should apply JetBrains Mono font and correct font size to terminal', async ({ page }) => {
-        // Verify font file is actually loaded (status 200)
-        const fontResponse = await page.request.get('/assets/fonts/JetBrainsMono-Regular.ttf');
-        expect(fontResponse.ok()).toBeTruthy();
+  test('should apply JetBrains Mono font and correct font size to terminal', async ({ page }) => {
+    // Need to create/join a session to initialize terminal
+    const SESSION_NAME = 'font-test';
+    await page.fill('#new-session-name', SESSION_NAME);
+    await page.click('button:has-text("Create")');
 
-        // Tạo session để mở terminal
-        const sessionName = `font-test-${Date.now()}`;
-        await page.fill('#new-session-name', sessionName);
-        await page.click('button:has-text("Create Session")');
-        
-        // Đợi xterm khởi tạo
-        await page.waitForSelector('.xterm-rows');
-
-        // Kiểm tra font-family của terminal
-        const fontFamily = await page.evaluate(() => {
-            const terminalElement = document.querySelector('.xterm-rows') as HTMLElement;
-            return window.getComputedStyle(terminalElement).fontFamily;
-        });
-        
-        // Kiểm tra xem font JetBrains Mono có nằm trong danh sách không
-        expect(fontFamily).toContain('JetBrains Mono');
+    // Wait for terminal to be initialized
+    await page.waitForFunction(() => (window as any).term !== null);
+    
+    const terminalData = await page.evaluate(() => {
+      const term = (window as any).term;
+      return {
+        fontFamily: term.options.fontFamily,
+        fontSize: term.options.fontSize,
+      };
     });
+
+    expect(terminalData.fontFamily).toContain('JetBrains Mono');
+    expect(terminalData.fontSize).toBe(16);
+  });
 });

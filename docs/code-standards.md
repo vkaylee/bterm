@@ -19,6 +19,6 @@ Dự án BTerminal tuân thủ các tiêu chuẩn mã nguồn nghiêm ngặt đ�
 - **Styling:** Sử dụng Tailwind CSS (Standalone build).
 
 ### 2. Terminal Rendering
-- **Font:** Sử dụng JetBrains Mono (cỡ chữ 14px).
-- **Responsive:** Sử dụng `dvh` thay cho `vh` để hỗ trợ mobile viewport chính xác hơn.
-- **Resize:** Luôn sử dụng `requestAnimationFrame` trong `ResizeObserver` để đảm bảo layout DOM đã ổn định trước khi gọi `fit()`.
+- **Font:** Sử dụng JetBrains Mono. Cỡ chữ mặc định là **16px** cho Desktop (viewport >= 640px) và **14px** cho Mobile để tối ưu hóa không gian hiển thị.
+- **Responsive:** Sử dụng `dvh` thay cho `vh` và kết hợp với `VisualViewport API` để điều chỉnh `app.style.height`. Điều này đảm bảo terminal không bị bàn phím ảo che khuất.
+- **Resize:** Luôn sử dụng `requestAnimationFrame` trong `ResizeObserver` và gọi `term.scrollToBottom()` sau khi resize để đảm bảo con trỏ luôn nằm trong vùng nhìn thấy.

@@ -303,7 +303,7 @@
             
             term = new Terminal({
                 cursorBlink: true,
-                fontSize: 14,
+                fontSize: window.innerWidth < 640 ? 14 : 16,
                 fontFamily: '"JetBrains Mono", monospace',
                 theme: { 
                     background: '#000000', 

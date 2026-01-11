@@ -8,10 +8,14 @@
 - **`src/session.rs`**: Session lifecycle management. Includes `SessionRegistry` (now integrated with global broadcast) and `monitor_session` for resource cleanup and real-time deletion notifications.
 - **`src/pty_manager.rs`**: Direct OS interface for PTY creation and control.
 
-## Frontend (Single-page Application)
-- `frontend/dist/index.html`: Main UI built with Tailwind CSS and Xterm.js.
-  ... (UI details) ...
-  - **Real-time Sync**: Uses `EventSource` to listen for backend events and automatically update the dashboard or redirect users on session termination.
+## Frontend (HTML/JS)
+- `frontend/dist/index.html`: Giao diện người dùng duy nhất (SPA). Sử dụng Tailwind CSS cho layout và Xterm.js cho terminal.
+- **Tính năng nổi bật:**
+  - **Adaptive Font Size:** Tự động điều chỉnh cỡ chữ terminal (16px cho desktop, 14px cho mobile).
+  - **Dynamic Viewport Scaling:** Sử dụng `VisualViewport API` để thay đổi chiều cao ứng dụng khi bàn phím mobile hiện lên, ngăn chặn việc che khuất nội dung.
+  - **Sticky Modifiers:** Hỗ trợ phím chức năng ảo (Ctrl, Alt) trên mobile.
+  - **Real-time Sync:** Tự động cập nhật danh sách session qua SSE.
+  - **Single Binary:** Tích hợp sâu với backend qua `rust-embed`.
 
 ## Testing & Quality
 - **Coverage**: **95.12% line coverage** achieved for the Rust backend.
