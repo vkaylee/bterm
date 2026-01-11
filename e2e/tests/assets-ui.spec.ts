@@ -35,7 +35,7 @@ test.describe('Assets UI', () => {
     });
 
     expect(terminalData.fontFamily).toContain('JetBrains Mono');
-    expect(terminalData.fontSize).toBe(16);
+    expect(terminalData.fontSize).toBe(15);
   });
 
   test('should load Canvas addon script and have it available', async ({ page }) => {
