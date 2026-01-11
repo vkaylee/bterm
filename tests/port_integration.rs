@@ -51,13 +51,15 @@ async fn test_port_env_variable() {
 
 #[tokio::test]
 async fn test_port_collision_fallback() {
-    // 1. Chiếm port 3000
-    let _occupier = TcpListener::bind("0.0.0.0:3000").await
-        .expect("Could not bind to 3000 for test");
+    // 1. Tìm một port ngẫu nhiên và chiếm nó
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let occupied_port = listener.local_addr().unwrap().port();
+    // Giữ listener này mở để tạo sự cố chiếm dụng (collision)
 
-    // 2. Chạy app (mặc định sẽ thử 3000 rồi fallback)
+    // 2. Chạy app và yêu cầu nó sử dụng đúng port đã bị chiếm đó
     let mut child = Command::new("cargo")
         .arg("run")
+        .env("PORT", occupied_port.to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
@@ -91,6 +93,9 @@ async fn test_port_collision_fallback() {
     }
 
     let _ = child.kill().await;
+    drop(listener); // Giải phóng port chiếm dụng
+
     assert!(detected_port != 0, "Should have detected a port");
-    assert!(detected_port != 3000, "Should NOT have used port 3000 as it was occupied");
+    assert!(detected_port != occupied_port, "Should NOT have used the occupied port {}", occupied_port);
+    println!("Successfully verified fallback from {} to {}", occupied_port, detected_port);
 }
