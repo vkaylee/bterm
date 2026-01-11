@@ -24,6 +24,8 @@ cargo run
 
 ## Features
 - **Multi-session:** Create and manage independent terminal sessions.
+- **Modern Dashboard:** Content-first layout with real-time session monitoring and count.
+- **Pro Header:** Quick access to session IDs, connectivity status, and easy exit.
+- **Mobile Optimized:** 2-row virtual keyboard, Sticky Modifiers (Ctrl/Alt), and visual viewport awareness.
 - **Shared View:** Multiple clients can join the same session.
-- **Responsive:** Optimized for both desktop and mobile use.
 - **Zero Dependencies:** All frontend assets are embedded in the binary.

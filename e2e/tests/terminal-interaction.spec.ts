@@ -9,7 +9,7 @@ test.describe('Terminal Interaction', () => {
     await page.fill('#new-session-name', SESSION_NAME);
     const [response] = await Promise.all([
       page.waitForResponse(response => response.url().includes('/api/sessions') && response.request().method() === 'POST'),
-      page.click('button:has-text("Create")')
+      page.click('button:has-text("Create Session")')
     ]);
     expect(response.ok()).toBeTruthy(); // Ensure API call was successful
     
@@ -34,7 +34,7 @@ test.describe('Terminal Interaction', () => {
 
   test.afterEach(async ({ page }) => {
     // Clean up: go back to dashboard and delete the session
-    await page.click('button:has-text("Exit")'); // Back to dashboard
+    await page.click('button[title="Exit Session"]'); // Back to dashboard
     await page.waitForSelector('#dashboard');
     
     const sessionCardToDelete = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
@@ -58,31 +58,23 @@ test.describe('Terminal Interaction', () => {
     const command = 'echo Hello Playwright!';
     const expectedOutput = 'Hello Playwright!';
 
-    // Type command into the terminal using xterm.js instance
-    await page.evaluate((cmd) => {
-      // Find the xterm.js instance, assuming 'term' is globally available
-      const term = (window as any).term; 
-      console.log('Playwright: Accessing window.term:', term); // Debugging
-      if (term) {
-        term.write(cmd + '\x0D'); // Use hex for Enter key
-      } else {
-        console.error('Xterm.js instance not found in window.term');
-      }
-    }, command);
+    // Focus terminal first
+    await page.click('#terminal');
+    
+    // Type command using native keyboard events
+    await page.keyboard.type(command);
+    await page.keyboard.press('Enter');
 
-    // Wait for the output to appear. This is tricky.
-    // We can evaluate the terminal's DOM content or wait for specific text to appear.
-    // We need to wait for the actual text content to include the expected output, not just the element.
+    // Wait for the output to appear
     await page.waitForFunction(
       ([output]) => {
         const terminalElement = document.querySelector('#terminal .xterm-rows');
         const textContent = terminalElement?.textContent;
-        console.log('Terminal text content:', textContent); // Debugging
         // xterm.js might add control characters, so just check for inclusion
         return textContent && textContent.includes(output);
       },
       [expectedOutput],
-      { timeout: 30000 } // Increased timeout further
+      { timeout: 30000 }
     );
 
     // Verify the output

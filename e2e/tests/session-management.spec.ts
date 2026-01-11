@@ -10,7 +10,7 @@ test.describe('Session Management', () => {
     await page.fill('#new-session-name', SESSION_NAME);
     const [response] = await Promise.all([
       page.waitForResponse(response => response.url().includes('/api/sessions') && response.request().method() === 'POST'),
-      page.click('button:has-text("Create")')
+      page.click('button:has-text("Create Session")')
     ]);
     expect(response.ok()).toBeTruthy(); // Ensure API call was successful
 
