@@ -18,19 +18,37 @@ use tower_http::cors::CorsLayer;
 use rust_embed::RustEmbed;
 use axum::response::{Html, IntoResponse, Response};
 use axum::http::{header, StatusCode, Uri};
+use tokio::sync::broadcast;
+use serde::Serialize;
 
 #[derive(RustEmbed)]
 #[folder = "frontend/dist/"]
 pub struct Assets;
 
+#[derive(Clone, Serialize, Debug)]
+#[serde(tag = "type", content = "data")]
+pub enum GlobalEvent {
+    SessionCreated(String),
+    SessionDeleted(String),
+}
+
+pub struct AppState {
+    pub registry: Arc<SessionRegistry>,
+    pub tx: broadcast::Sender<GlobalEvent>,
+}
+
 pub fn create_app(registry: Arc<SessionRegistry>) -> Router {
+    let (tx, _rx) = broadcast::channel(100);
+    let state = Arc::new(AppState { registry, tx });
+
     Router::new()
         .route("/api/sessions", get(api::list_sessions))
         .route("/api/sessions", post(api::create_session))
         .route("/api/sessions/{id}", axum::routing::delete(api::delete_session))
+        .route("/api/events", get(api::events_handler))
         .route("/ws/{session_id}", get(ws::ws_handler))
         .fallback(static_handler)
-        .with_state(registry)
+        .with_state(state)
         .layer(CorsLayer::permissive())
 }
 

@@ -452,7 +452,32 @@
             setTimeout(fetchSessions, 100);
         }
 
+        function initEventSource() {
+            const es = new EventSource('/api/events');
+            es.onmessage = (e) => {
+                try {
+                    const event = JSON.parse(e.data);
+                    console.log("Real-time event:", event);
+                    // Refresh session list for any creation or deletion event
+                    fetchSessions();
+                    
+                    // If we are currently in a session that was deleted, go back to dashboard
+                    const currentId = document.getElementById('current-session-id').innerText;
+                    if (event.type === 'SessionDeleted' && event.data === currentId) {
+                        alert(`Session "${currentId}" has been deleted.`);
+                        backToDashboard();
+                    }
+                } catch (err) {
+                    console.error("SSE parse error", err);
+                }
+            };
+            es.onerror = () => {
+                console.warn("SSE connection lost. Reconnecting...");
+            };
+        }
+
         fetchSessions();
+        initEventSource();
     </script>
 </body>
 </html>

@@ -6,7 +6,8 @@ use axum::{
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use std::sync::Arc;
 use serde::Deserialize;
-use crate::session::{Session, SessionRegistry};
+use crate::session::Session;
+use crate::AppState;
 
 #[derive(Deserialize)]
 #[serde(tag = "type", content = "data")]
@@ -17,10 +18,10 @@ enum ClientMessage {
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
-    State(registry): State<Arc<SessionRegistry>>,
+    State(state): State<Arc<AppState>>,
     axum::extract::Path(session_id): axum::extract::Path<String>,
 ) -> impl IntoResponse {
-    let session = registry.get_session(&session_id);
+    let session = state.registry.get_session(&session_id);
 
     session.map_or_else(|| {
         println!("Session not found: {session_id}");
@@ -108,6 +109,14 @@ mod tests {
     use super::*;
     use axum::http::StatusCode;
     use axum::{routing::get, Router};
+    use crate::session::SessionRegistry;
+    use tokio::sync::broadcast;
+
+    fn setup_state() -> Arc<AppState> {
+        let registry = Arc::new(SessionRegistry::new());
+        let (tx, _) = broadcast::channel(10);
+        Arc::new(AppState { registry, tx })
+    }
 
     #[test]
     fn test_client_message_deserialization() {
@@ -134,10 +143,10 @@ mod tests {
         use tokio_tungstenite::connect_async;
         use tokio::net::TcpListener;
 
-        let registry = Arc::new(SessionRegistry::new());
+        let state = setup_state();
         let app = Router::new()
             .route("/ws/{session_id}", get(ws_handler))
-            .with_state(registry);
+            .with_state(state);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -147,8 +156,6 @@ mod tests {
         });
 
         let url = format!("ws://{}:{}/ws/invalid", addr.ip(), addr.port());
-        // For an invalid session, it returns "Session not found" which is NOT a WS upgrade
-        // connect_async will fail with a 200 OK response that is not a switch protocol
         let result = connect_async(url).await;
         match result {
             Err(tokio_tungstenite::tungstenite::Error::Http(resp)) => {
@@ -165,9 +172,9 @@ mod tests {
         use tokio_tungstenite::connect_async;
         use tokio::net::TcpListener;
 
-        let registry = Arc::new(SessionRegistry::new());
+        let state = setup_state();
         let session_id = "history-test".to_string();
-        let session = registry.create_session(session_id.clone());
+        let session = state.registry.create_session(session_id.clone());
         
         // Add some history
         {
@@ -177,7 +184,7 @@ mod tests {
 
         let app = Router::new()
             .route("/ws/{session_id}", get(ws_handler))
-            .with_state(registry);
+            .with_state(state);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();

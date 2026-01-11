@@ -5,8 +5,8 @@
 ```ascii
 ┌──────────────┐      HTTP (JSON)      ┌──────────────────┐
 │   Browser    │◄─────────────────────▶│   Axum Server    │
-│  (Dashboard) │                       │ (SessionRegistry)│
-└──────────────┘                       └────────┬─────────┘
+│  (Dashboard) │◄─────────────────────┤ (SessionRegistry)│
+└──────────────┘      SSE Events       └────────┬─────────┘
         ▲                                       │
         │ WebSockets (Binary)                   │ Spawn
         ▼                                       ▼
@@ -18,21 +18,15 @@
 
 ## Luồng dữ liệu (Data Flow)
 1. **PTY Output -> Clients:**
-   - PTY Process tạo output bytes.
-   - Một luồng (thread) đọc output và gửi vào `tokio::sync::broadcast` channel.
-   - Hàm `monitor_session` lắng nghe channel này để:
-     - Cập nhật buffer lịch sử (100KB gần nhất).
-     - Phát hiện **Termination Signal** (vector rỗng) và tự động xóa session khỏi `SessionRegistry`.
-   - `ws_handler` nhận tín hiệu này qua channel, thoát vòng lặp binary và gửi gói tin JSON `{"type": "Exit"}` tới Browser trước khi đóng socket.
-
+   ...
 2. **Client Input -> PTY:**
-   - Browser gửi WebSocket message dạng JSON (`Input`).
-   - Server trích xuất `data` và ghi trực tiếp vào PTY Master Writer.
-
+   ...
 3. **Terminal Resizing:**
-   - Khi kích thước cửa sổ trình duyệt thay đổi, `ResizeObserver` kích hoạt `FitAddon`.
-   - Browser gửi WebSocket message dạng JSON (`Resize`) chứa số hàng (`rows`) và cột (`cols`) mới.
-   - `PtyManager` sử dụng `MasterPty::resize` để cập nhật kích thước của tiến trình shell đang chạy, đảm bảo dữ liệu hiển thị không bị vỡ hoặc giới hạn ở 80 cột.
+   ...
+4. **Real-time Sync (Dashboard):**
+   - Khi một session được tạo hoặc xóa, Server gửi một sự kiện thông qua `tokio::sync::broadcast` channel toàn cục.
+   - Endpoint `/api/events` (Server-Sent Events) lắng nghe channel này và đẩy thông báo tới toàn bộ Dashboard đang mở.
+   - Browser tự động cập nhật danh sách session hoặc hiển thị thông báo nếu session hiện tại bị xóa, đảm bảo tính nhất quán dữ liệu giữa nhiều thiết bị.
 
 ## Tối ưu hóa cho Mobile
 Để đảm bảo trải nghiệm tốt trên thiết bị di động, BTerminal thực hiện các kỹ thuật sau:

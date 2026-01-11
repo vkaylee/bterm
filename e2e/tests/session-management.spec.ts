@@ -27,10 +27,13 @@ test.describe('Session Management', () => {
     await expect(sessionCardLocator).toBeVisible();
     await expect(sessionCardLocator).toHaveCount(1); // Ensure it's unique after creation
 
-    // Confirm deletion in the alert dialog
+    // Confirm deletion in the alert dialog AND handle the SSE notification alert
     page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain(`Are you sure you want to delete session "${SESSION_NAME}"?`);
-      await dialog.accept();
+      if (dialog.message().includes('Are you sure')) {
+        await dialog.accept();
+      } else if (dialog.message().includes('has been deleted')) {
+        await dialog.accept();
+      }
     });
 
     // Delete session

@@ -28,6 +28,14 @@ Xóa một phiên làm việc và đóng PTY process liên quan.
 - **Response (200):** OK
 - **Response (404):** Not Found
 
+### GET `/api/events` (SSE)
+Stream các sự kiện thời gian thực tới Dashboard để cập nhật giao diện mà không cần refresh.
+- **Event Data (JSON):**
+  ```json
+  {"type": "SessionCreated", "data": "session-id"}
+  {"type": "SessionDeleted", "data": "session-id"}
+  ```
+
 ---
 
 ## WebSockets
