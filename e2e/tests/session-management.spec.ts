@@ -60,14 +60,13 @@ test.describe('Session Management', () => {
   });
 
   test('should hide active sessions section when no sessions exist', async ({ page }) => {
-    // Wait for the initial session fetch to complete
-    await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/sessions') && resp.request().method() === 'GET'),
-      page.goto('/')
-    ]);
+    // Navigate and wait for the sessions API response
+    const sessionsResponse = page.waitForResponse(resp => resp.url().includes('/api/sessions') && resp.request().method() === 'GET');
+    await page.goto('/');
+    await sessionsResponse;
     
-    // Initially, there should be no sessions in the isolated backend
-    await expect(page.locator('#active-sessions-section')).toBeHidden();
+    // Initially, there should be no sessions, so section should be hidden
+    await expect(page.locator('#active-sessions-section')).toBeHidden({ timeout: 10000 });
     
     // Verify auto-focus
     await expect(page.locator('#new-session-name')).toBeFocused();
