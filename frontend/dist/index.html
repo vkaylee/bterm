@@ -24,14 +24,22 @@
         /* Style cho các nút điều khiển trên mobile */
         .btn-ctrl {
             background-color: #334155;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            min-width: 44px;
+            padding: 10px 4px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
             text-align: center;
+            color: #f1f5f9;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
         }
-        .btn-ctrl:active { background-color: #475569; }
+        .btn-ctrl:active { 
+            background-color: #3b82f6; 
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body class="overflow-hidden">
@@ -73,21 +81,36 @@
             <div id="terminal" class="flex-1 w-full h-full overflow-hidden"></div>
             
             <!-- Mobile Controls -->
-            <div id="control-bar" class="hidden flex-wrap justify-center gap-1.5 p-2 bg-slate-900 border-t border-slate-800">
-                <button class="btn-ctrl" onclick="sendSpecialKey('control')">Ctrl</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('alt')">Alt</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('escape')">Esc</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('tab')">Tab</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('arrowup')">▲</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('arrowdown')">▼</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('arrowleft')">◀</button>
-                <button class="btn-ctrl" onclick="sendSpecialKey('arrowright')">▶</button>
+            <div id="control-bar" class="hidden flex-col gap-1 p-1.5 bg-slate-900 border-t border-slate-800 shadow-[0_-4px_10px_rgba(0,0,0,0.3)]">
+                <!-- Hàng trên -->
+                <div class="grid grid-cols-7 gap-1">
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('escape')">Esc</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('slash')">/</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('minus')">-</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('home')">Home</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('arrowup')">▲</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('end')">End</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('pageup')">PgUp</button>
+                </div>
+                
+                <!-- Hàng dưới -->
+                <div class="grid grid-cols-7 gap-1">
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('tab')">Tab</button>
+                    <button id="btn-ctrl-key" class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('control')">Ctrl</button>
+                    <button id="btn-alt-key" class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('alt')">Alt</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('arrowleft')">◀</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('arrowdown')">▼</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('arrowright')">▶</button>
+                    <button class="btn-ctrl" onmousedown="event.preventDefault()" onclick="sendSpecialKey('pagedown')">PgDn</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let term, fitAddon, ws;
+        let ctrlActive = false;
+        let altActive = false;
 
         // Expose to window for E2E tests
         window.term = null;
@@ -270,7 +293,24 @@
             
             term.onData(data => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'Input', data: data }));
+                    let finalData = data;
+                    
+                    if (ctrlActive && data.length === 1) {
+                        const code = data.charCodeAt(0);
+                        if (code >= 97 && code <= 122) { // a-z
+                            finalData = String.fromCharCode(code - 96);
+                        } else if (code >= 65 && code <= 90) { // A-Z
+                            finalData = String.fromCharCode(code - 64);
+                        }
+                        ctrlActive = false;
+                        updateModifierUI();
+                    } else if (altActive && data.length === 1) {
+                        finalData = '\x1b' + data;
+                        altActive = false;
+                        updateModifierUI();
+                    }
+
+                    ws.send(JSON.stringify({ type: 'Input', data: finalData }));
                 }
             });
 
@@ -281,13 +321,40 @@
             if (window.visualViewport) updateVisualViewport();
         }
 
+        function updateModifierUI() {
+            const ctrlBtn = document.getElementById('btn-ctrl-key');
+            const altBtn = document.getElementById('btn-alt-key');
+            if (ctrlBtn) {
+                ctrlBtn.style.backgroundColor = ctrlActive ? '#3b82f6' : '#334155';
+                ctrlBtn.setAttribute('data-active', ctrlActive);
+            }
+            if (altBtn) {
+                altBtn.style.backgroundColor = altActive ? '#3b82f6' : '#334155';
+                altBtn.setAttribute('data-active', altActive);
+            }
+        }
+
         function sendSpecialKey(key) {
             let data;
             switch (key) {
-                case 'control': data = '\x02'; break;
-                case 'alt': data = '\x1b'; break;
+                case 'control': 
+                    ctrlActive = !ctrlActive;
+                    altActive = false;
+                    updateModifierUI();
+                    return;
+                case 'alt': 
+                    altActive = !altActive;
+                    ctrlActive = false;
+                    updateModifierUI();
+                    return;
                 case 'escape': data = '\x1b'; break;
                 case 'tab': data = '\t'; break;
+                case 'slash': data = '/'; break;
+                case 'minus': data = '-'; break;
+                case 'home': data = '\x1b[H'; break;
+                case 'end': data = '\x1b[F'; break;
+                case 'pageup': data = '\x1b[5~'; break;
+                case 'pagedown': data = '\x1b[6~'; break;
                 case 'arrowup': data = '\x1b[A'; break;
                 case 'arrowdown': data = '\x1b[B'; break;
                 case 'arrowleft': data = '\x1b[D'; break;
@@ -296,6 +363,7 @@
             if (data && ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'Input', data: data }));
             }
+            if (term) term.focus();
         }
 
         function backToDashboard() {

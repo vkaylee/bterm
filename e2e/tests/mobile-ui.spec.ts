@@ -18,9 +18,46 @@ test.describe('Mobile UI & Keyboard Overlay', () => {
     await page.waitForSelector('#terminal-view');
   });
 
-  test('should show control bar on mobile', async ({ page }) => {
+  test('should show control bar with 2 rows on mobile', async ({ page }) => {
     const controlBar = page.locator('#control-bar');
     await expect(controlBar).toBeVisible();
+    
+    // Check for 2 grid rows
+    const rows = controlBar.locator('.grid');
+    await expect(rows).toHaveCount(2);
+  });
+
+  test('should handle sticky Ctrl + c combination', async ({ page }) => {
+    // 1. Click Ctrl button using dispatchEvent to ensure onclick is triggered
+    const ctrlBtn = page.locator('#btn-ctrl-key');
+    await ctrlBtn.dispatchEvent('click');
+    
+    // Verify it turns active via data-attribute
+    await expect(ctrlBtn).toHaveAttribute('data-active', 'true');
+
+    // 2. Mock WebSocket send to capture the final data
+    const sentData = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        const originalSend = (window as any).ws.send;
+        (window as any).ws.send = (msg: string) => {
+          const parsed = JSON.parse(msg);
+          if (parsed.type === 'Input') {
+            (window as any).ws.send = originalSend; // restore
+            resolve(parsed.data);
+          }
+          originalSend.apply((window as any).ws, [msg]);
+        };
+        
+        // Trigger a 'c' input through xterm.js
+        (window as any).term._core._onData.fire('c');
+      });
+    });
+
+    // 3. Verify that 'c' was transformed to \x03 (Ctrl+C)
+    expect(sentData).toBe('\x03');
+    
+    // 4. Verify Ctrl button returns to normal
+    await expect(ctrlBtn).toHaveAttribute('data-active', 'false');
   });
 
   test('should offset control bar when visual viewport is smaller (keyboard simulation)', async ({ page }) => {
