@@ -106,6 +106,8 @@ async fn handle_socket(socket: WebSocket, session: Session) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::StatusCode;
+    use axum::{routing::get, Router};
 
     #[test]
     fn test_client_message_deserialization() {
@@ -126,14 +128,70 @@ mod tests {
             _ => panic!("Expected Resize"),
         }
     }
+
+    #[tokio::test]
+    async fn test_ws_handler_not_found() {
+        use tokio_tungstenite::connect_async;
+        use tokio::net::TcpListener;
+
+        let registry = Arc::new(SessionRegistry::new());
+        let app = Router::new()
+            .route("/ws/{session_id}", get(ws_handler))
+            .with_state(registry);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
         
-        #[tokio::test]
-        
-        async fn test_ws_handler_not_found() {
-        
-            // Session registry test is already covered in session.rs
-        
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let url = format!("ws://{}:{}/ws/invalid", addr.ip(), addr.port());
+        // For an invalid session, it returns "Session not found" which is NOT a WS upgrade
+        // connect_async will fail with a 200 OK response that is not a switch protocol
+        let result = connect_async(url).await;
+        match result {
+            Err(tokio_tungstenite::tungstenite::Error::Http(resp)) => {
+                assert_eq!(resp.status(), StatusCode::OK);
+                let body = resp.into_body().unwrap();
+                assert_eq!(body, "Session not found".as_bytes().to_vec());
+            }
+            _ => panic!("Expected HTTP error with Session not found message, got {:?}", result),
         }
+    }
+
+    #[tokio::test]
+    async fn test_ws_history_sent() {
+        use tokio_tungstenite::connect_async;
+        use tokio::net::TcpListener;
+
+        let registry = Arc::new(SessionRegistry::new());
+        let session_id = "history-test".to_string();
+        let session = registry.create_session(session_id.clone());
         
-        
+        // Add some history
+        {
+            let mut history = session.history.lock().unwrap();
+            history.extend_from_slice(b"old data");
         }
+
+        let app = Router::new()
+            .route("/ws/{session_id}", get(ws_handler))
+            .with_state(registry);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let url = format!("ws://{}:{}/ws/{}", addr.ip(), addr.port(), session_id);
+        let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+        let (_, mut read) = ws_stream.split();
+
+        // First message should be the history
+        let msg = read.next().await.unwrap().unwrap();
+        assert_eq!(msg.into_data().as_ref(), b"old data");
+    }
+}

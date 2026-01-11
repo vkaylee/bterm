@@ -13,6 +13,13 @@ All notable changes to this project will be documented in this file.
 - **Auto-Focus**: The session name input field is automatically focused on page load if no active sessions exist.
 - **Adaptive Virtual Keyboard**: On mobile, the custom virtual keyboard (Esc, Ctrl, Alt, etc.) now automatically hides when the system software keyboard is dismissed, maximizing screen space for the terminal.
 
+### Added
+- **Lib/Bin Architecture**: Refactored the backend into a library (`src/lib.rs`) and a thin binary (`src/main.rs`) to enable high-fidelity integration testing of all modules.
+- **WebSocket Integration Tests**: New test suite in `tests/ws_integration.rs` and unit tests in `src/ws.rs` to verify full terminal data flow, history transmission, and error handling.
+- **Static Asset Testing**: Added automated verification for embedded asset serving and MIME type detection.
+- **Session History Test**: Implemented verification for automatic state recovery on WebSocket reconnection.
+- **Enhanced Coverage**: Achieved 94.12% line coverage across the Rust backend, ensuring all critical business logic and error paths are verified.
+
 ### Changed
 - Updated `src/main.rs` to use `tokio::net::TcpListener` with a fallback loop instead of a hardcoded address.
 - Refactored E2E tests to use a custom `test` fixture with dynamic `baseURL` instead of a global `webServer`.

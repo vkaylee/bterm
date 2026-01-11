@@ -128,4 +128,19 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn test_static_handler_asset() {
+        let registry = Arc::new(SessionRegistry::new());
+        let app = create_app(registry);
+
+        // Request an asset that exists in frontend/dist/assets/
+        let response = app
+            .oneshot(Request::builder().uri("/assets/xterm.css").body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers().get(header::CONTENT_TYPE).unwrap(), "text/css");
+    }
 }

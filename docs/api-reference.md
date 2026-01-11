@@ -35,16 +35,23 @@ Xóa một phiên làm việc và đóng PTY process liên quan.
 ### Endpoint: `/ws/{session_id}`
 Kết nối vào luồng dữ liệu thời gian thực của một session.
 
+#### Connection Lifecycle
+1.  **History Transmission**: Ngay khi kết nối thành công, server sẽ gửi toàn bộ lịch sử buffer hiện có (lên đến 100KB) dưới dạng **Binary Messages** trước khi bắt đầu truyền dữ liệu thời gian thực.
+2.  **Real-time Streaming**: Dữ liệu từ PTY được truyền dưới dạng **Binary Messages**.
+3.  **Graceful Exit**: Khi tiến trình shell kết thúc, server gửi một tin nhắn JSON `{"type": "Exit"}` trước khi đóng kết nối WebSocket.
+
 #### Client Messages (JSON)
-- **Input:** Gửi dữ liệu phím bấm tới terminal.
+- **Input**: Gửi dữ liệu phím bấm tới terminal.
   ```json
   {"type": "Input", "data": "ls -la\n"}
   ```
-- **Resize:** Cập nhật kích thước hàng/cột của PTY.
+- **Resize**: Cập nhật kích thước hàng/cột của PTY.
   ```json
-  {"type": "Resize", "data": {"rows": 24, "cols": 80}}
+  {"type": "Resize", "data": {"rows": 30, "cols": 100}}
   ```
 
-#### Server Messages (Binary)
-- Dữ liệu thô (raw bytes) từ PTY output để Xterm.js render.
+#### Server Messages
+- **Binary**: Dữ liệu thô (raw bytes) từ PTY output hoặc lịch sử buffer.
+- **Text (JSON)**: Thông báo trạng thái (ví dụ: `{"type": "Exit"}`).
+
 

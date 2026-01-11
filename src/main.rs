@@ -17,6 +17,7 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+#[cfg(not(tarpaulin_include))]
 async fn bind_listener() -> tokio::net::TcpListener {
     let env_port = std::env::var("PORT").ok().and_then(|p| p.parse::<u16>().ok());
     let mut ports = Vec::new();
