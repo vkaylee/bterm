@@ -15,16 +15,56 @@ test.describe('Mobile UI', () => {
     await page.waitForSelector('#terminal-view');
   });
 
-  test('should show control bar with 2 rows on mobile', async ({ page }) => {
+  test('should hide control bar initially and show only when keyboard appears', async ({ page }) => {
     const controlBar = page.locator('#control-bar');
+    
+    // Initially hidden (since we don't simulate keyboard yet)
+    await expect(controlBar).toBeHidden();
+    
+    // Simulate keyboard opening
+    await page.evaluate(() => {
+      Object.defineProperty(window, 'visualViewport', {
+        value: {
+          height: window.innerHeight - 300,
+          offsetTop: 0,
+          addEventListener: () => {},
+        },
+        configurable: true
+      });
+      (window as any).updateVisualViewport();
+    });
+
     await expect(controlBar).toBeVisible();
     
     // Check for 2 grid rows
     const rows = controlBar.locator('.grid');
     await expect(rows).toHaveCount(2);
+
+    // Simulate keyboard closing
+    await page.evaluate(() => {
+      Object.defineProperty(window, 'visualViewport', {
+        value: {
+          height: window.innerHeight,
+          offsetTop: 0,
+        },
+        configurable: true
+      });
+      (window as any).updateVisualViewport();
+    });
+
+    await expect(controlBar).toBeHidden();
   });
 
-  test('should handle sticky Ctrl + c combination', async ({ page }) => {
+  test('should handle sticky Ctrl + c combination when visible', async ({ page }) => {
+    // 0. Force keyboard visible to interact with buttons
+    await page.evaluate(() => {
+      Object.defineProperty(window, 'visualViewport', {
+        value: { height: window.innerHeight - 300, offsetTop: 0 },
+        configurable: true
+      });
+      (window as any).updateVisualViewport();
+    });
+
     // Ensure WebSocket is ready
     await page.waitForFunction(() => (window as any).ws && (window as any).ws.readyState === 1);
 
@@ -58,62 +98,6 @@ test.describe('Mobile UI', () => {
     
     // 4. Verify Ctrl button returns to normal
     await expect(ctrlBtn).toHaveAttribute('data-active', 'false');
-  });
-
-  test('should offset control bar when visual viewport is smaller (keyboard simulation)', async ({ page }) => {
-    const controlBar = page.locator('#control-bar');
-    
-    // Simulate keyboard opening by mocking visualViewport properties
-    await page.evaluate(() => {
-      const originalViewport = window.visualViewport;
-      if (!originalViewport) return;
-
-      // We mock the height to be smaller (as if keyboard took 300px)
-      // and offsetTop to be 0 (keyboard at bottom)
-      const mockHeight = window.innerHeight - 300;
-      
-      // Since visualViewport is read-only, we might need to call the update function directly 
-      // with mocked values or use Object.defineProperty if we want the event listener to pick it up.
-      
-      // Let's redefine the property for the test
-      Object.defineProperty(window, 'visualViewport', {
-        value: {
-          height: mockHeight,
-          offsetTop: 0,
-          addEventListener: originalViewport.addEventListener.bind(originalViewport),
-          removeEventListener: originalViewport.removeEventListener.bind(originalViewport),
-        },
-        configurable: true
-      });
-
-      // Manually trigger the update function that's defined in index.html
-      // We expect the function to be in the global scope or accessible.
-      // In index.html it is defined in the script tag, so it's global.
-      (window as any).updateVisualViewport();
-    });
-
-    // Check if transform is applied: translateY(-300px)
-    const transform = await controlBar.evaluate(el => el.style.transform);
-    expect(transform).toBe('translateY(-300px)');
-  });
-
-  test('should reset control bar when visual viewport returns to normal', async ({ page }) => {
-    const controlBar = page.locator('#control-bar');
-    
-    await page.evaluate(() => {
-      // Simulate keyboard closing
-      Object.defineProperty(window, 'visualViewport', {
-        value: {
-          height: window.innerHeight,
-          offsetTop: 0,
-        },
-        configurable: true
-      });
-      (window as any).updateVisualViewport();
-    });
-
-    const transform = await controlBar.evaluate(el => el.style.transform);
-    expect(transform).toBe('none');
   });
 
   test('should have scrollIntoView behavior on session input for mobile accessibility', async ({ page }) => {

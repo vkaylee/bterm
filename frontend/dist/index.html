@@ -180,10 +180,14 @@
                 // Tính toán khoảng cách bị che khuất bởi bàn phím
                 const offset = window.innerHeight - viewport.height - viewport.offsetTop;
                 
-                // Đẩy thanh điều khiển lên trên bàn phím
-                if (offset > 0) {
+                // Nếu offset > một ngưỡng nhỏ (ví dụ 50px), coi như bàn phím đang hiện
+                const isKeyboardVisible = offset > 50;
+
+                if (isKeyboardVisible) {
+                    controlBar.style.display = 'flex';
                     controlBar.style.transform = `translateY(-${offset}px)`;
                 } else {
+                    controlBar.style.display = 'none';
                     controlBar.style.transform = 'none';
                 }
 
@@ -290,10 +294,6 @@
             document.getElementById('session-info').classList.remove('hidden');
             document.getElementById('current-session-id').innerText = id;
             
-            if (window.innerWidth <= 768) {
-                document.getElementById('control-bar').style.display = 'flex';
-            }
-
             if (term) term.dispose();
             const container = document.getElementById('terminal');
             container.innerHTML = '';

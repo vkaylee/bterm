@@ -13,6 +13,7 @@
   - **Dashboard**: Content-first list of active sessions with a "Start New Instance" section. The active sessions list is automatically hidden when empty to maintain focus.
   - **Auto-Join**: Successful session creation immediately triggers the terminal view for seamless UX.
   - **Keyboard & Focus UX**: Supports "Enter" key for rapid session creation and automatically focuses the input field on empty dashboards.
+  - **Mobile Adaptive UI**: Uses Visual Viewport API to sync custom virtual keyboard visibility with the system software keyboard, ensuring optimal terminal visibility on small screens.
   - **Terminal View**: Xterm.js container with a mobile-optimized 2-row virtual keyboard.
   - **Mobile Logic**: Uses `VisualViewport API` for layout adjustment and "Sticky Modifiers" for complex key combinations.
 
