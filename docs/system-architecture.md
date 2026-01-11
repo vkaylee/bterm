@@ -27,6 +27,11 @@
    - Browser gửi WebSocket message dạng JSON (`Input`).
    - Server trích xuất `data` và ghi trực tiếp vào PTY Master Writer.
 
+3. **Terminal Resizing:**
+   - Khi kích thước cửa sổ trình duyệt thay đổi, `ResizeObserver` kích hoạt `FitAddon`.
+   - Browser gửi WebSocket message dạng JSON (`Resize`) chứa số hàng (`rows`) và cột (`cols`) mới.
+   - `PtyManager` sử dụng `MasterPty::resize` để cập nhật kích thước của tiến trình shell đang chạy, đảm bảo dữ liệu hiển thị không bị vỡ hoặc giới hạn ở 80 cột.
+
 ## Tối ưu hóa cho Mobile
 Để đảm bảo trải nghiệm tốt trên thiết bị di động, BTerminal thực hiện các kỹ thuật sau:
 - **Viewport Management:** Tự động điều chỉnh kích thước PTY khi bàn phím ảo xuất hiện/biến mất thông qua `ResizeObserver`.
@@ -35,4 +40,5 @@
 
 ## Deployment
 - Ứng dụng được đóng gói dưới dạng **Single Binary**.
-- Frontend (HTML/JS/CSS) được nhúng trực tiếp vào binary Rust bằng `rust-embed`, cho phép triển khai chỉ với một tệp duy nhất mà không cần thư mục dist đi kèm.
+- Frontend (HTML/JS/CSS) và toàn bộ tài nguyên (Fonts, Libraries) được nhúng trực tiếp vào binary Rust bằng `rust-embed`.
+- Dự án không yêu cầu kết nối Internet khi khởi chạy (Zero external dependencies at runtime).

@@ -4,291 +4,273 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BTerminal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="./assets/tailwindcss.js"></script>
+    <link rel="stylesheet" href="./assets/xterm.css" />
+    <script src="./assets/xterm.js"></script>
+    <script src="./assets/xterm-addon-fit.js"></script>
     <style>
-        body { background-color: #0f172a; color: white; }
-        .terminal-container { height: calc(100vh - 120px); }
-        #terminal { height: 100%; }
+        @font-face {
+            font-family: 'JetBrains Mono';
+            src: url('./assets/fonts/JetBrainsMono-Regular.ttf') format('truetype');
+        }
+        body { 
+            background-color: #020617; 
+            color: white; 
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
         .xterm-viewport { overflow-y: auto !important; }
-        .xterm .xterm-screen {
-            width: 100% !important;
-            height: 100% !important;
+        #terminal { background-color: black; }
+        /* Style cho các nút điều khiển trên mobile */
+        .btn-ctrl {
+            background-color: #334155;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 44px;
+            text-align: center;
         }
-        /* Mobile specific styles for the control bar */
-        @media (max-width: 768px) {
-            #control-bar {
-                display: flex; /* Show on mobile */
-            }
-        }
+        .btn-ctrl:active { background-color: #475569; }
     </style>
 </head>
-<body class="p-0 m-0 overflow-hidden bg-slate-950 text-white">
-    <div id="app" class="flex flex-col h-screen">
-        <header class="flex justify-between items-center px-4 py-2 bg-slate-900 border-b border-slate-800 shadow-sm md:px-6 md:py-3">
-            <div class="flex items-center gap-2 md:gap-4">
-                <h1 class="text-lg font-bold text-blue-400 tracking-tight md:text-xl">BTerminal</h1>
-                <div id="session-info" class="hidden items-center gap-2 text-xs border-l border-slate-700 pl-2 md:flex md:gap-3 md:text-sm md:pl-4">
-                    <span class="text-gray-400">Session:</span>
-                    <span id="current-session-id" class="text-blue-300 font-mono font-medium"></span>
-                    <button onclick="backToDashboard()" class="ml-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-xs transition border border-slate-700 md:ml-2 md:px-3 md:py-1">Exit</button>
+<body class="overflow-hidden">
+    <div id="app" class="flex flex-col h-[100dvh] w-screen">
+        <!-- Header -->
+        <header class="flex justify-between items-center px-4 py-3 bg-slate-900 border-b border-slate-800 shadow-md z-10">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-bold text-blue-400 tracking-tight">BTerminal</h1>
+                <div id="session-info" class="hidden items-center gap-3 border-l border-slate-700 pl-4">
+                    <span class="text-gray-400 text-sm">Session:</span>
+                    <span id="current-session-id" class="text-blue-300 font-medium"></span>
+                    <button onclick="backToDashboard()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs border border-slate-700 transition">Exit</button>
                 </div>
             </div>
-            <div class="text-[8px] text-gray-500 font-mono uppercase tracking-widest md:text-[10px]">v1.0.0</div>
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest">v1.1.0</div>
         </header>
 
         <!-- Dashboard -->
-        <div id="dashboard" class="flex-1 overflow-y-auto p-4 md:p-10">
+        <main id="dashboard" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-950">
             <div class="max-w-4xl mx-auto">
-                <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-2xl mb-8 md:p-8 md:mb-10">
-                    <h2 class="text-base font-semibold mb-3 text-gray-200 md:text-lg">Create New Session</h2>
-                    <div class="flex flex-col gap-3 md:flex-row">
-                        <input type="text" id="new-session-name" placeholder="Give your session a name..." 
-                               class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition text-gray-200 md:px-4 md:py-2.5">
-                        <button onclick="createSession()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold transition shadow-lg shadow-blue-900/20 md:px-8 md:py-2.5">Create</button>
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-xl mb-8">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-200">Create New Session</h2>
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                        <input type="text" id="new-session-name" placeholder="Enter session name..." 
+                               class="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-gray-200">
+                        <button onclick="createSession()" class="bg-blue-600 hover:bg-blue-700 px-8 py-2.5 rounded-lg font-bold transition shadow-lg">Create</button>
                     </div>
                 </div>
 
-                <h2 class="text-base font-semibold mb-3 text-gray-400 px-2 md:text-lg">Active Sessions</h2>
+                <h2 class="text-lg font-semibold mb-4 text-gray-400 px-2">Active Sessions</h2>
                 <div id="session-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Sessions listed here -->
+                    <!-- Sessions list -->
                 </div>
             </div>
-        </div>
+        </main>
 
         <!-- Terminal View -->
-        <div id="terminal-view" class="hidden flex-col flex-1 bg-black">
-            <div id="terminal" class="h-full w-full"></div>
-            <!-- On-screen Control Bar for Mobile -->
-            <div id="control-bar" class="hidden flex-wrap justify-center gap-1 p-2 bg-slate-900 border-t border-slate-800 md:hidden">
-                <button class="control-button" data-key="control">Ctrl</button>
-                <button class="control-button" data-key="alt">Alt</button>
-                <button class="control-button" data-key="escape">Esc</button>
-                <button class="control-button" data-key="tab">Tab</button>
-                <button class="control-button" data-key="arrowup">▲</button>
-                <button class="control-button" data-key="arrowdown">▼</button>
-                <button class="control-button" data-key="arrowleft">◀</button>
-                <button class="control-button" data-key="arrowright">▶</button>
-                <!-- Add more special keys as needed -->
+        <div id="terminal-view" class="hidden flex-1 flex-col bg-black relative w-full overflow-hidden">
+            <div id="terminal" class="flex-1 w-full h-full overflow-hidden"></div>
+            
+            <!-- Mobile Controls -->
+            <div id="control-bar" class="hidden flex-wrap justify-center gap-1.5 p-2 bg-slate-900 border-t border-slate-800">
+                <button class="btn-ctrl" onclick="sendSpecialKey('control')">Ctrl</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('alt')">Alt</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('escape')">Esc</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('tab')">Tab</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('arrowup')">▲</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('arrowdown')">▼</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('arrowleft')">◀</button>
+                <button class="btn-ctrl" onclick="sendSpecialKey('arrowright')">▶</button>
             </div>
         </div>
     </div>
 
     <script>
-        let term;
-        let fitAddon;
-        let ws;
+        let term, fitAddon, ws;
 
-        // Tối ưu hóa việc resize
+        // Expose to window for E2E tests
+        window.term = null;
+        window.fitAddon = null;
+        window.ws = null;
+
         const resizeObserver = new ResizeObserver(() => {
-            if (fitAddon && term) {
-                fitAddon.fit();
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
-                }
+            if (term && fitAddon && document.getElementById('terminal-view').style.display === 'flex') {
+                requestAnimationFrame(() => {
+                    try {
+                        fitAddon.fit();
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                        }
+                    } catch (e) {}
+                });
             }
         });
 
         async function fetchSessions() {
-            console.log('Fetching sessions...');
-            const res = await fetch('/api/sessions');
-            const sessions = await res.json();
-            console.log('Fetched sessions:', sessions);
-            const list = document.getElementById('session-list');
-            list.innerHTML = '';
-            
-            if (sessions.length === 0) {
-                list.innerHTML = '<p class="text-gray-500 italic">No active sessions.</p>';
-                return;
-            }
+            try {
+                const res = await fetch('/api/sessions');
+                const sessions = await res.json();
+                const list = document.getElementById('session-list');
+                list.innerHTML = '';
+                
+                if (sessions.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 italic px-2">No active sessions.</p>';
+                    return;
+                }
 
-            sessions.forEach(s => {
-                const card = document.createElement('div');
-                card.className = 'group relative bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 cursor-pointer transition';
-                card.onclick = () => joinSession(s.id);
-                card.innerHTML = `
-                    <div class="font-mono text-lg mb-2">${s.id}</div>
-                    <div class="text-xs text-gray-400">Click to connect</div>
-                    <button onclick="event.stopPropagation(); removeSession('${s.id}')" 
-                            class="absolute top-3 right-3 p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                `;
-                list.appendChild(card);
-            });
+                sessions.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = 'group relative bg-slate-800 p-5 rounded-lg border border-slate-700 hover:border-blue-500 cursor-pointer transition shadow-md';
+                    card.onclick = () => joinSession(s.id);
+                    card.innerHTML = `
+                        <div class="font-mono text-lg font-bold mb-1">${s.id}</div>
+                        <div class="text-xs text-gray-500">Connect to session</div>
+                        <button onclick="event.stopPropagation(); removeSession('${s.id}')" 
+                                class="absolute top-4 right-4 p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    `;
+                    list.appendChild(card);
+                });
+            } catch (e) { console.error("Fetch sessions failed", e); }
+        }
+
+        async function createSession() {
+            const input = document.getElementById('new-session-name');
+            const id = input.value.trim();
+            if (!id) return;
+            
+            console.log("Creating session:", id);
+            try {
+                const res = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    fetchSessions();
+                } else {
+                    alert('Error: Session ID might already exist.');
+                }
+            } catch (e) {
+                console.error("Create session failed", e);
+                alert("Network error. Is the server running?");
+            }
         }
 
         async function removeSession(id) {
             if (!confirm(`Are you sure you want to delete session "${id}"?`)) return;
-            
-            const res = await fetch(`/api/sessions/${id}`, {
-                method: 'DELETE'
-            });
-            
-            if (res.ok) {
-                fetchSessions();
-            } else {
-                alert('Failed to delete session');
-            }
-        }
-
-        async function createSession() {
-            const id = document.getElementById('new-session-name').value.trim();
-            if (!id) return;
-            
-            const res = await fetch('/api/sessions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id })
-            });
-            
-            if (res.ok) {
-                document.getElementById('new-session-name').value = '';
-                fetchSessions();
-            } else {
-                alert('Failed to create session');
-            }
+            try {
+                const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+                if (res.ok) fetchSessions();
+            } catch (e) { console.error(e); }
         }
 
         function joinSession(id) {
             document.getElementById('dashboard').classList.add('hidden');
-            document.getElementById('terminal-view').classList.remove('hidden');
+            const view = document.getElementById('terminal-view');
+            view.style.display = 'flex';
             document.getElementById('session-info').classList.remove('hidden');
             document.getElementById('current-session-id').innerText = id;
             
-            // Show control bar on mobile devices
-            if (window.innerWidth <= 768) { // Or whatever breakpoint you consider 'mobile'
-                document.getElementById('control-bar').classList.remove('hidden');
+            if (window.innerWidth <= 768) {
+                document.getElementById('control-bar').style.display = 'flex';
             }
 
             if (term) term.dispose();
-            const terminalContainer = document.getElementById('terminal');
-            terminalContainer.innerHTML = ''; // Clear container
+            const container = document.getElementById('terminal');
+            container.innerHTML = '';
             
             term = new Terminal({
                 cursorBlink: true,
-                fontSize: 16,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                theme: {
-                    background: '#000000',
-                    foreground: '#e2e8f0'
+                fontSize: 14,
+                fontFamily: '"JetBrains Mono", monospace',
+                theme: { 
+                    background: '#000000', 
+                    foreground: '#e2e8f0', 
+                    cursor: '#ffffff',
+                    selectionBackground: 'rgba(255, 255, 255, 0.3)'
                 },
-                allowProposedApi: true
+                allowProposedApi: true,
+                letterSpacing: 0.5,
+                lineHeight: 1.2,
+                cursorStyle: 'block'
             });
-            
-            fitAddon = new FitAddon.FitAddon();
-            term.loadAddon(fitAddon);
-            term.open(terminalContainer);
-            term.focus();
-            
-            // Expose term globally for Playwright E2E tests
             window.term = term;
             
-            // Wait a bit for the element to be visible before fitting
-            setTimeout(() => {
-                console.log('Attempting to fit terminal after delay. Container offsetWidth:', terminalContainer.offsetWidth);
-                fitAddon.fit();
-                term.refresh(0, term.rows - 1);
-                console.log('Terminal fitted. Rows:', term.rows, 'Cols:', term.cols);
-                
-                // Add a small test write to confirm rendering
-                term.write('\r\n\x1b[32mBTerminal connected.\x1b[0m\r\n');
-                
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${protocol}//${window.location.host}/ws/${id}`);
-                ws.binaryType = 'arraybuffer';
+            fitAddon = new FitAddon.FitAddon();
+            window.fitAddon = fitAddon;
 
-                ws.onopen = () => {
-                    console.log('WebSocket opened.');
-                    // Re-fit after a short delay once WS is open to ensure rendering
-                    setTimeout(() => {
-                        fitAddon.fit();
-                        term.refresh(0, term.rows - 1);
-                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
-                    }, 100);
-                };
-
-                ws.onerror = (error) => {
-                    console.error('WebSocket Error:', error);
-                    alert('WebSocket connection error. See console for details.');
-                };
-
-                ws.onmessage = (event) => {
-                    console.log('Received data from WS. Size:', event.data.byteLength);
-                    term.write(new Uint8Array(event.data));
-                    if (window.innerWidth <= 768) {
-                        term.scrollToBottom();
-                    }
-                };
-
-                term.onData(data => {
-                    console.log('Term.onData fired. Data size:', data.length);
+            term.loadAddon(fitAddon);
+            term.open(container);
+            
+            // Đảm bảo terminal chiếm toàn bộ không gian
+            const doFit = () => {
+                if (!term || !fitAddon || !container.offsetParent) return;
+                try { 
+                    fitAddon.fit(); 
                     if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'Input', data: data }));
+                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
                     }
-                });
+                } catch(e) {
+                    console.warn("Fit failed", e);
+                }
+            };
 
-                resizeObserver.observe(document.getElementById('terminal-view'));
+            setTimeout(doFit, 50);
+            setTimeout(doFit, 300);
 
-                // Attach event listeners for control buttons
-                document.querySelectorAll('.control-button').forEach(button => {
-                    button.onclick = () => {
-                        const key = button.dataset.key;
-                        let dataToSend;
-                        switch (key) {
-                            case 'control': dataToSend = '\x02'; break; // Ctrl+B for tmux, or other common Ctrl codes
-                            case 'alt': dataToSend = '\x1b'; break; // ESC for Alt
-                            case 'escape': dataToSend = '\x1b'; break;
-                            case 'tab': dataToSend = '\t'; break;
-                            case 'arrowup': dataToSend = '\x1b[A'; break;
-                            case 'arrowdown': dataToSend = '\x1b[B'; break;
-                            case 'arrowleft': dataToSend = '\x1b[D'; break;
-                            case 'arrowright': dataToSend = '\x1b[C'; break;
-                            default: return;
-                        }
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'Input', data: dataToSend }));
-                        }
-                    };
-                });
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/${id}`);
+            window.ws = ws;
+            ws.binaryType = 'arraybuffer';
 
-            }, 200); // Increased delay
+            ws.onopen = () => { doFit(); };
+            ws.onmessage = (e) => { term.write(new Uint8Array(e.data)); };
+            ws.onerror = (err) => { console.error("WS Error", err); };
+            
+            term.onData(data => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'Input', data: data }));
+                }
+            });
+
+            resizeObserver.observe(view);
+            term.focus();
+        }
+
+        function sendSpecialKey(key) {
+            let data;
+            switch (key) {
+                case 'control': data = '\x02'; break;
+                case 'alt': data = '\x1b'; break;
+                case 'escape': data = '\x1b'; break;
+                case 'tab': data = '\t'; break;
+                case 'arrowup': data = '\x1b[A'; break;
+                case 'arrowdown': data = '\x1b[B'; break;
+                case 'arrowleft': data = '\x1b[D'; break;
+                case 'arrowright': data = '\x1b[C'; break;
+            }
+            if (data && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'Input', data: data }));
+            }
         }
 
         function backToDashboard() {
-            if (ws) {
-                ws.close();
-                ws = null; // Clear WebSocket instance
-            }
-            resizeObserver.unobserve(document.getElementById('terminal-view'));
-            
-            // Clear all event listeners for control buttons to prevent duplicates
-            document.querySelectorAll('.control-button').forEach(button => {
-                button.onclick = null;
-            });
-
-            // Hide control bar
-            document.getElementById('control-bar').classList.add('hidden');
-
+            if (ws) { ws.close(); ws = null; }
+            resizeObserver.disconnect();
             document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('terminal-view').classList.add('hidden');
+            document.getElementById('terminal-view').style.display = 'none';
             document.getElementById('session-info').classList.add('hidden');
+            document.getElementById('control-bar').style.display = 'none';
             fetchSessions();
         }
 
-        // Initial fetch of sessions when the page loads
         fetchSessions();
     </script>
-    <style>
-        .control-button {
-            @apply bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-gray-200 text-sm font-semibold 
-                   px-3 py-1 rounded-md transition duration-150 ease-in-out cursor-pointer select-none;
-            min-width: 40px;
-        }
-    </style>
 </body>
 </html>

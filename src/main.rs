@@ -1,3 +1,7 @@
+#![deny(warnings)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+#![allow(clippy::module_name_repetitions)]
+
 mod pty_manager;
 mod session;
 mod ws;
@@ -33,7 +37,7 @@ async fn main() {
 
     let addr = "0.0.0.0:3000";
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    println!("🚀 BTerminal is running on http://{}", addr);
+    println!("🚀 BTerminal is running on http://{addr}");
     println!("Press Ctrl+C to stop the server");
     
     axum::serve(listener, app).await.unwrap();
@@ -43,7 +47,7 @@ async fn static_handler(uri: Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
 
     if path.is_empty() || path == "index.html" {
-        return index_html().await;
+        return index_html();
     }
 
     match Assets::get(path) {
@@ -58,15 +62,20 @@ async fn static_handler(uri: Uri) -> impl IntoResponse {
             if path.contains('.') {
                 StatusCode::NOT_FOUND.into_response()
             } else {
-                index_html().await
+                index_html()
             }
         }
     }
 }
 
-async fn index_html() -> Response {
+fn index_html() -> Response {
+
     match Assets::get("index.html") {
+
         Some(content) => Html(content.data).into_response(),
+
         None => StatusCode::NOT_FOUND.into_response(),
+
     }
+
 }

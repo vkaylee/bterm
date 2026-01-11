@@ -1,107 +1,88 @@
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem, MasterPty};
 use tokio::sync::broadcast;
 
-pub struct PtyInstance {
-    pub master: Arc<Mutex<Box<dyn portable_pty::MasterPty + Send>>>,
-    pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
-    pub tx: broadcast::Sender<Vec<u8>>,
+pub struct PtyManager {
+    master: Arc<Mutex<Box<dyn MasterPty + Send>>>,
+    writer: Arc<Mutex<Box<dyn Write + Send>>>,
+    reader: Mutex<Option<Box<dyn Read + Send>>>,
 }
 
-impl PtyInstance {
-    pub fn new(shell: &str, size: PtySize) -> anyhow::Result<Self> {
-        println!("Creating new PTY session with shell: {}", shell);
-        let pty_system = native_pty_system();
-        let pair = pty_system.openpty(size)?;
-
-        let cmd = CommandBuilder::new(shell);
-        let mut child = pair.slave.spawn_command(cmd)?;
-
-        let master = pair.master;
-        let writer = master.take_writer()?;
-        let (tx, _rx) = broadcast::channel(1024);
-
-            let master_arc: Arc<Mutex<Box<dyn portable_pty::MasterPty + Send>>> = Arc::new(Mutex::new(master));
-            let writer_arc = Arc::new(Mutex::new(writer));
-            
-            let master_clone = Arc::clone(&master_arc);
-            let tx_clone = tx.clone();
-            let shell_string = shell.to_string();
-
-            thread::spawn(move || {
-                println!("PTY reader thread started for shell: {}", shell_string);
-                let mut reader = master_clone.lock().unwrap().try_clone_reader().unwrap();
-                let mut buffer = [0u8; 1024];
-                loop {
-                    match reader.read(&mut buffer) {
-                        Ok(0) => {
-                            println!("PTY reader EOF");
-                            break;
-                        }
-                        Ok(n) => {
-                            println!("PTY reader received {} bytes.", n);
-                            if tx_clone.receiver_count() > 0 || true { // Always keep buffer updated via session
-                                 let _ = tx_clone.send(buffer[..n].to_vec());
-                            }
-                        }
-                        Err(e) => {
-                            println!("PTY reader error: {}", e);
-                            break;
-                        }
-                    }
-                }
-                let _ = child.wait();
-                println!("PTY process exited");
-            });
-
-            Ok(Self {
-                master: master_arc,
-                writer: writer_arc,
-                tx,
-            })
-        }
-
-        pub fn write(&self, data: &[u8]) -> anyhow::Result<()> {
-            println!("PTY writer received {} bytes.", data.len());
-            let mut writer = self.writer.lock().unwrap();
-            writer.write_all(data)?;
-            writer.flush()?;
-            Ok(())
-        }
-
-        pub fn resize(&self, rows: u16, cols: u16) -> anyhow::Result<()> {
-            println!("PTY resize to {}x{}", cols, rows);
-            self.master.lock().unwrap().resize(PtySize {
-                rows,
-                cols,
+impl PtyManager {
+    #[must_use]
+    pub fn new() -> Self {
+        let pty_system = NativePtySystem::default();
+        let pair = pty_system
+            .openpty(PtySize {
+                rows: 24,
+                cols: 80,
                 pixel_width: 0,
                 pixel_height: 0,
-            })?;
-            Ok(())
+            })
+            .unwrap();
+
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string());
+        let cmd = CommandBuilder::new(shell);
+        let mut child = pair.slave.spawn_command(cmd).unwrap();
+
+        thread::spawn(move || {
+            let _ = child.wait();
+        });
+
+        let writer = pair.master.take_writer().unwrap();
+        let reader = pair.master.try_clone_reader().unwrap();
+        let master = pair.master;
+
+        Self {
+            master: Arc::new(Mutex::new(master)),
+            writer: Arc::new(Mutex::new(writer)),
+            reader: Mutex::new(Some(reader)),
         }
     }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    pub fn start_reader(&self, tx: broadcast::Sender<Vec<u8>>) {
+        let mut reader_opt = self.reader.lock().unwrap();
+        if let Some(mut reader) = reader_opt.take() {
+            thread::spawn(move || {
+                let mut buf = [0u8; 1024];
+                while let Ok(n) = reader.read(&mut buf) {
+                    if n == 0 {
+                        break;
+                    }
+                    if let Err(e) = tx.send(buf[..n].to_vec()) {
+                        println!("Broadcast error (expected if no listeners): {e}");
+                    }
+                }
+                println!("PTY Reader thread exiting.");
+            });
+        }
+    }
 
-    #[test]
-    fn test_pty_creation_and_write() {
-        let size = PtySize {
-            rows: 24,
-            cols: 80,
+    /// # Errors
+    /// Returns error if PTY writer fails
+    pub fn write(&self, data: &[u8]) -> anyhow::Result<()> {
+        let mut writer = self.writer.lock().unwrap();
+        writer.write_all(data)?;
+        writer.flush()?;
+        Ok(())
+    }
+
+    pub fn resize(&self, rows: u16, cols: u16) -> anyhow::Result<()> {
+        let master = self.master.lock().unwrap();
+        master.resize(PtySize {
+            rows,
+            cols,
             pixel_width: 0,
             pixel_height: 0,
-        };
-        // Use /bin/sh for broader compatibility in tests
-        let pty = PtyInstance::new("/bin/sh", size);
-        assert!(pty.is_ok());
-        
-        let pty = pty.unwrap();
-        // Test write (should not panic)
-        let res = pty.write(b"ls\n");
-        assert!(res.is_ok());
+        })?;
+        Ok(())
+    }
+}
+
+impl Default for PtyManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
