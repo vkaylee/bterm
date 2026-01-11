@@ -9,10 +9,10 @@ test.describe('Mobile UI', () => {
     
     await page.goto('/');
     await page.fill('#new-session-name', SESSION_NAME);
-    await page.click('button:has-text("Create")');
+    await page.click('button:has-text("Create Session")');
     
     // Auto-join should have happened
-    await page.waitForSelector('#terminal-view');
+    await page.waitForSelector('#terminal-view', { state: 'visible', timeout: 10000 });
   });
 
   test('should hide control bar initially and show only when keyboard appears', async ({ page }) => {

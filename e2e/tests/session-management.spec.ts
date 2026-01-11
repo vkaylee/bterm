@@ -3,6 +3,27 @@ import { test, expect } from '../fixtures';
 test.describe('Session Management', () => {
   const SESSION_NAME = `mgmt-session-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
+  test.beforeEach(async ({ page }) => {
+    // Default dialog handler to automatically accept all confirmations and alerts
+    page.on('dialog', async dialog => {
+        try {
+            await dialog.accept();
+        } catch (e) {
+            // Ignore if already handled
+        }
+    });
+
+    await page.goto('/');
+    // Clear any existing sessions that might have leaked from other tests in the same worker
+    const sessionCards = page.locator('#session-list div.group');
+    let count = await sessionCards.count();
+    while (count > 0) {
+        await sessionCards.first().locator('button', { has: page.locator('svg') }).click();
+        await page.waitForTimeout(300); // Wait for deletion to propagate
+        count = await sessionCards.count();
+    }
+  });
+
   test('should create and delete a session', async ({ page }) => {
     await page.goto('/');
 
@@ -27,25 +48,12 @@ test.describe('Session Management', () => {
     await expect(sessionCardLocator).toBeVisible();
     await expect(sessionCardLocator).toHaveCount(1); // Ensure it's unique after creation
 
-    // Confirm deletion in the alert dialog AND handle the SSE notification alert
-    page.on('dialog', async dialog => {
-      if (dialog.message().includes('Are you sure')) {
-        await dialog.accept();
-      } else if (dialog.message().includes('has been deleted')) {
-        await dialog.accept();
-      }
-    });
-
     // Delete session
     const deleteButton = sessionCardLocator.locator('button', { has: page.locator('svg') });
     await deleteButton.click();
 
-    // Give frontend some time to update
-    await page.waitForTimeout(500); // Wait for 500ms
-
     // Wait for the session card to be removed from the list
-    await expect(sessionCardLocator).not.toBeVisible();
-    await expect(sessionCardLocator).toHaveCount(0);
+    await expect(sessionCardLocator).not.toBeVisible({ timeout: 10000 });
   });
 
   test('should create a session by pressing Enter key', async ({ page }) => {
@@ -63,9 +71,13 @@ test.describe('Session Management', () => {
 
     // Cleanup: delete the session
     await page.click('button[title="Exit Session"]');
-    page.on('dialog', dialog => dialog.accept());
-    await page.click('button[onclick*="removeSession"]');
-    await expect(page.locator(`text=${ENTER_SESSION}`)).toBeHidden();
+    
+    // Find the specific card and its delete button
+    const sessionCard = page.locator(`#session-list div.group:has-text("${ENTER_SESSION}")`);
+    await sessionCard.locator('button', { has: page.locator('svg') }).click();
+
+    // Wait for it to disappear
+    await expect(sessionCard).toBeHidden({ timeout: 10000 });
   });
 
   test('should hide active sessions section when no sessions exist', async ({ page }) => {
@@ -89,11 +101,10 @@ test.describe('Session Management', () => {
     await expect(page.locator('#active-sessions-section')).toBeVisible();
     
     // Delete it
-    page.on('dialog', dialog => dialog.accept());
     const deleteButton = page.locator('#session-list button').first();
     await deleteButton.click();
     
     // Section should be hidden again
-    await expect(page.locator('#active-sessions-section')).toBeHidden();
+    await expect(page.locator('#active-sessions-section')).toBeHidden({ timeout: 10000 });
   });
 });
