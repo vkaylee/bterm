@@ -40,33 +40,20 @@ impl SessionRegistry {
             history: history.clone(),
         };
 
-        let tx_clone = tx.clone();
-        let history_clone = history.clone();
-        let mut rx = tx.subscribe();
-
-        // Luồng lưu trữ lịch sử terminal (100KB)
-        tokio::spawn(async move {
-            loop {
-                match rx.recv().await {
-                    Ok(data) => {
-                        if data.is_empty() {
-                            break; // Stop tracking history for this session
-                        }
-                        let mut buffer = history_clone.lock().unwrap();
-                        buffer.extend_from_slice(&data);
-                        let len = buffer.len();
-                        if len > 102_400 {
-                            buffer.drain(..len - 102_400);
-                        }
-                    }
-                    Err(broadcast::error::RecvError::Lagged(_)) => {}
-                    Err(_) => break,
-                }
-            }
-        });
+        let tx = tx.clone();
+        let history = history.clone();
+        let rx = tx.subscribe();
 
         // Khởi động PTY reader thread
-        pty_manager.start_reader(tx_clone);
+        pty_manager.start_reader(tx.clone());
+
+        // Khởi động luồng giám sát session (lưu lịch sử và tự dọn dẹp)
+        tokio::spawn(monitor_session(
+            rx,
+            history.clone(),
+            Arc::clone(&self.sessions),
+            id.clone(),
+        ));
 
         self.sessions.lock().unwrap().insert(id, session.clone());
         session
@@ -87,6 +74,89 @@ impl SessionRegistry {
 
     pub fn remove_session(&self, id: &str) {
         self.sessions.lock().unwrap().remove(id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_monitor_session_history_and_cleanup() {
+        let (tx, rx) = broadcast::channel(10);
+        let history = Arc::new(Mutex::new(Vec::new()));
+        let sessions = Arc::new(Mutex::new(std::collections::HashMap::new()));
+        let session_id = "test-session".to_string();
+
+        // Giả lập session trong registry
+        let pty_manager = Arc::new(PtyManager::new());
+        let session = Session {
+            id: session_id.clone(),
+            pty_manager,
+            broadcast_tx: tx.clone(),
+            history: history.clone(),
+        };
+        sessions.lock().unwrap().insert(session_id.clone(), session);
+
+        // Chạy monitor_session
+        tokio::spawn(monitor_session(
+            rx,
+            history.clone(),
+            sessions.clone(),
+            session_id.clone(),
+        ));
+
+        // Gửi dữ liệu
+        tx.send(b"hello".to_vec()).unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Kiểm tra history
+        {
+            let h = history.lock().unwrap();
+            assert_eq!(h.as_slice(), b"hello");
+        }
+
+        // Gửi tín hiệu kết thúc
+        tx.send(Vec::new()).unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Kiểm tra dọn dẹp registry
+        {
+            let s = sessions.lock().unwrap();
+            assert!(s.get(&session_id).is_none(), "Session should be removed after empty signal");
+        }
+    }
+}
+
+/// Hàm giám sát session: lưu trữ lịch sử output và tự động xóa session khỏi registry khi PTY kết thúc.
+async fn monitor_session(
+    mut rx: broadcast::Receiver<Vec<u8>>,
+    history: Arc<Mutex<Vec<u8>>>,
+    registry_sessions: Arc<Mutex<std::collections::HashMap<String, Session>>>,
+    session_id: String,
+) {
+    loop {
+        match rx.recv().await {
+            Ok(data) => {
+                if data.is_empty() {
+                    // PTY kết thúc, xóa session khỏi registry
+                    registry_sessions.lock().unwrap().remove(&session_id);
+                    break;
+                }
+                // Lưu lịch sử (giới hạn 100KB)
+                let mut buffer = history.lock().unwrap();
+                buffer.extend_from_slice(&data);
+                let len = buffer.len();
+                if len > 102_400 {
+                    buffer.drain(..len - 102_400);
+                }
+            }
+            Err(broadcast::error::RecvError::Lagged(_)) => {
+                // Tiếp tục nếu bị lag (mất một số message)
+            }
+            Err(_) => break, // Channel bị đóng
+        }
     }
 }
 

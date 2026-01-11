@@ -25,20 +25,22 @@ test.describe('Terminal Interaction', () => {
     }
     
     const sessionCardToDelete = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
-    await expect(sessionCardToDelete).toBeVisible(); // Ensure it's visible before trying to delete
+    const exists = await sessionCardToDelete.isVisible();
     
-    // Set up dialog handler before clicking delete
-    page.on('dialog', async dialog => {
-      await dialog.accept();
-    });
+    if (exists) {
+        // Set up dialog handler before clicking delete
+        page.on('dialog', async dialog => {
+          await dialog.accept();
+        });
 
-    const deleteButton = sessionCardToDelete.locator('button', { has: page.locator('svg') });
-    await deleteButton.click();
+        const deleteButton = sessionCardToDelete.locator('button', { has: page.locator('svg') });
+        await deleteButton.click();
 
-    // Give frontend some time to update
-    await page.waitForTimeout(500); // Wait for 500ms
+        // Give frontend some time to update
+        await page.waitForTimeout(500); // Wait for 500ms
 
-    await expect(sessionCardToDelete).not.toBeVisible();
+        await expect(sessionCardToDelete).not.toBeVisible();
+    }
   });
 
   test('should send command and receive output', async ({ page }) => {
@@ -77,12 +79,16 @@ test.describe('Terminal Interaction', () => {
         await page.keyboard.type('exit');
         await page.keyboard.press('Enter');
     
-        // Wait for dashboard to become visible (proving the auto-exit worked)
-        // We increase timeout as 'exit' might take a moment to propagate
-        await expect(page.locator('#dashboard')).toBeVisible({ timeout: 5000 });
+            // Wait for dashboard to become visible (proving the auto-exit worked)
+            // We increase timeout as 'exit' might take a moment to propagate
+            await expect(page.locator('#dashboard')).toBeVisible({ timeout: 5000 });
+            
+            // Check if session-info is hidden
+            await expect(page.locator('#session-info')).toBeHidden();
         
-        // Check if session-info is hidden
-        await expect(page.locator('#session-info')).toBeHidden();
-      });
-    });
-    
+            // NEW CHECK: Ensure the session is actually removed from the dashboard list
+            const sessionCard = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
+            await expect(sessionCard).not.toBeVisible();
+          });
+        });
+        

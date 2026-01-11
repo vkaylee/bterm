@@ -20,9 +20,10 @@
 1. **PTY Output -> Clients:**
    - PTY Process tạo output bytes.
    - Một luồng (thread) đọc output và gửi vào `tokio::sync::broadcast` channel.
-   - Khi PTY process kết thúc (EOF), Reader thread gửi một **Termination Signal** (vector rỗng) qua channel.
-   - `ws_handler` nhận tín hiệu này, thoát vòng lặp binary và gửi gói tin JSON `{"type": "Exit"}` tới Browser trước khi đóng socket.
-   - `SessionRegistry` lắng nghe channel này để cập nhật buffer lịch sử (100KB gần nhất), bỏ qua các tín hiệu trống.
+   - Hàm `monitor_session` lắng nghe channel này để:
+     - Cập nhật buffer lịch sử (100KB gần nhất).
+     - Phát hiện **Termination Signal** (vector rỗng) và tự động xóa session khỏi `SessionRegistry`.
+   - `ws_handler` nhận tín hiệu này qua channel, thoát vòng lặp binary và gửi gói tin JSON `{"type": "Exit"}` tới Browser trước khi đóng socket.
 
 2. **Client Input -> PTY:**
    - Browser gửi WebSocket message dạng JSON (`Input`).

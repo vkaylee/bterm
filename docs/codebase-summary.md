@@ -4,8 +4,8 @@
 - `src/main.rs`: Entry point, Axum server setup, and static asset embedding.
 - `src/api.rs`: REST API endpoints for session management (List, Create, Delete).
 - `src/ws.rs`: WebSocket handler for terminal I/O and PTY resizing.
-- `src/pty_manager.rs`: Manages the lifecycle of PTY instances.
-- `src/session.rs`: Logic for shared session state and broadcasting.
+- **`src/session.rs`**: Quản lý vòng đời session. Bao gồm `SessionRegistry` để lưu trữ các session đang hoạt động và hàm `monitor_session` để quản lý lịch sử và tự động dọn dẹp tài nguyên khi shell kết thúc.
+- **`src/pty_manager.rs`**: Giao tiếp trực tiếp với hệ điều hành để tạo và điều khiển PTY (Pseudo-Terminal).
 
 ## Frontend (Single-page Application)
 - `frontend/dist/index.html`: Main UI built with Tailwind CSS and Xterm.js.

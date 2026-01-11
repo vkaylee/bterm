@@ -441,7 +441,9 @@
             document.getElementById('session-info').classList.add('hidden');
             document.getElementById('control-bar').style.display = 'none';
             document.getElementById('control-bar').style.transform = 'none';
-            fetchSessions();
+            
+            // Wait a tiny bit for backend cleanup to finish before refreshing
+            setTimeout(fetchSessions, 100);
         }
 
         fetchSessions();
