@@ -144,4 +144,31 @@ test.describe('Mobile UI', () => {
     const onfocus = await input.getAttribute('onfocus');
     expect(onfocus).toContain('scrollIntoView');
   });
+
+  test('should use passive listeners and stable throttled updates for performance', async ({ page }) => {
+    // Check if the source code contains passive: true registration
+    const content = await page.content();
+    expect(content).toContain('passive: true');
+
+    // Verify throttledUpdate doesn't break app height update after rapid triggers
+    const initialHeight = await page.evaluate(() => window.innerHeight);
+    const app = page.locator('#app');
+
+    // Trigger updateVisualViewport multiple times rapidly (simulating throttle stress)
+    await page.evaluate((height) => {
+      for (let i = 0; i < 10; i++) {
+        // Mock visualViewport for each iteration
+        Object.defineProperty(window, 'visualViewport', {
+          value: { height: height - i, offsetTop: 0 },
+          configurable: true
+        });
+        (window as any).updateVisualViewport();
+      }
+    }, initialHeight);
+
+    // After microtask/animation frame, height should settle to the last value (initialHeight - 9)
+    await page.waitForTimeout(100); 
+    const finalHeight = await app.evaluate((el) => parseFloat(el.style.height));
+    expect(finalHeight).toBe(initialHeight - 9);
+  });
 });

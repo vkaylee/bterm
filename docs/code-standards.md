@@ -21,4 +21,7 @@ Dự án BTerminal tuân thủ các tiêu chuẩn mã nguồn nghiêm ngặt đ�
 ### 2. Terminal Rendering
 - **Font:** Sử dụng JetBrains Mono. Cỡ chữ mặc định là **16px** cho Desktop (viewport >= 640px) và **14px** cho Mobile để tối ưu hóa không gian hiển thị.
 - **Responsive:** Sử dụng `dvh` thay cho `vh` và kết hợp với `VisualViewport API` để điều chỉnh `app.style.height`. Điều này đảm bảo terminal không bị bàn phím ảo che khuất.
+- **Performance:** 
+  - Sử dụng `will-change: transform` và `backface-visibility: hidden` cho container terminal để kích hoạt GPU acceleration.
+  - Các sự kiện scroll/resize trên viewport PHẢI được đăng ký với `{ passive: true }` và sử dụng `requestAnimationFrame` (throttling) để tránh giật lag.
 - **Resize:** Luôn sử dụng `requestAnimationFrame` trong `ResizeObserver` và gọi `term.scrollToBottom()` sau khi resize để đảm bảo con trỏ luôn nằm trong vùng nhìn thấy.

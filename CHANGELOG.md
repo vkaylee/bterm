@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Visual Viewport Scaling**: The mobile UI now dynamically adjusts the application height based on the `visualViewport` height. This ensures the terminal remains fully visible when the software keyboard appears and prevents overlapping with UI elements.
 - **Auto-Scroll to Cursor**: The terminal now automatically scrolls to the bottom when the visual viewport is resized, keeping the command prompt in view.
-- **Enhanced Mobile E2E Suite**: Added test cases to verify application scaling and visual viewport response.
+- **Enhanced Mobile E2E Suite**: Added test cases to verify application scaling, visual viewport response, and performance-optimized listeners.
+- **Mobile Performance Optimization**: Implemented CSS hardware acceleration and `requestAnimationFrame` throttling for viewport events to eliminate touch and scroll lag on mobile devices.
 
 ### Changed
 - **Improved E2E Isolation**: Fixed a data leakage issue in `session-management.spec.ts` where sessions were not properly cleaned up between tests, ensuring more reliable parallel execution.

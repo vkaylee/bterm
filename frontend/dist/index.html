@@ -20,7 +20,12 @@
             font-family: 'JetBrains Mono', monospace;
         }
         .xterm-viewport { overflow-y: auto !important; }
-        #terminal { background-color: black; }
+        #terminal { 
+            background-color: black; 
+            will-change: transform;
+            backface-visibility: hidden;
+            touch-action: pan-y;
+        }
         /* Style cho các nút điều khiển trên mobile */
         .btn-ctrl {
             background-color: #334155;
@@ -35,6 +40,8 @@
             align-items: center;
             justify-content: center;
             text-transform: uppercase;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         .btn-ctrl:active { 
             background-color: #3b82f6; 
@@ -168,6 +175,17 @@
         });
 
         // Xử lý VisualViewport để đẩy các phím ảo lên khi bàn phím mobile xuất hiện
+        let updateTick = false;
+        function throttledUpdate() {
+            if (!updateTick) {
+                requestAnimationFrame(() => {
+                    updateVisualViewport();
+                    updateTick = false;
+                });
+                updateTick = true;
+            }
+        }
+
         function updateVisualViewport() {
             const viewport = window.visualViewport;
             const controlBar = document.getElementById('control-bar');
@@ -214,8 +232,8 @@
         }
 
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', updateVisualViewport);
-            window.visualViewport.addEventListener('scroll', updateVisualViewport);
+            window.visualViewport.addEventListener('resize', throttledUpdate, { passive: true });
+            window.visualViewport.addEventListener('scroll', throttledUpdate, { passive: true });
         }
 
         async function fetchSessions() {
