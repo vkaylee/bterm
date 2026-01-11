@@ -57,14 +57,23 @@ async fn handle_socket(socket: WebSocket, session: Session) {
 
     // Spawn a task to forward PTY output to WebSocket
     let mut send_task = tokio::spawn(async move {
-        while let Ok(data) = rx.recv().await {
-            if data.is_empty() {
-                break; // PTY ended
-            }
-            let bin_data: Vec<u8> = data;
-            if let Err(e) = sender.send(Message::Binary(bin_data.into())).await {
-                println!("WS send error: {e}");
-                return;
+        loop {
+            match rx.recv().await {
+                Ok(data) => {
+                    if data.is_empty() {
+                        break; // PTY ended
+                    }
+                    let bin_data: Vec<u8> = data;
+                    if let Err(e) = sender.send(Message::Binary(bin_data.into())).await {
+                        println!("WS send error: {e}");
+                        return;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    println!("WS forwarder lagged by {} messages", n);
+                    continue;
+                }
+                Err(_) => break, // Channel closed
             }
         }
         
