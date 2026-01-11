@@ -16,8 +16,8 @@
   - **Mobile Logic**: Uses `VisualViewport API` for layout adjustment and "Sticky Modifiers" for complex key combinations.
 
 ## Testing & Quality
-- `tests/port_integration.rs`: Integration tests for dynamic port binding and env overrides.
-- `e2e/playwright.config.ts`: Configuration for Playwright E2E tests with parallel worker support.
-- `e2e/fixtures.ts`: Worker-scoped fixtures for spawning isolated backend instances during E2E tests.
-- `e2e/tests/`: Comprehensive E2E test suite covering Session Management, Terminal Interaction, Assets, and Mobile UI.
+- `tests/port_integration.rs`: Robust integration tests for dynamic port binding with automatic collision detection.
+- `e2e/playwright.config.ts`: Configuration for parallelized E2E tests using worker-scoped isolation.
+- `e2e/fixtures.ts`: Worker fixtures that manage the lifecycle of isolated backend instances for tests.
+- `e2e/tests/`: Suite covering session management (including Enter key flow), terminal data flow, and mobile UI responsiveness.
 
