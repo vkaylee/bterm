@@ -35,9 +35,34 @@ async fn main() {
         .with_state(registry)
         .layer(CorsLayer::permissive());
 
-    let addr = "0.0.0.0:3000";
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    println!("🚀 BTerminal is running on http://{addr}");
+    let env_port = std::env::var("PORT").ok().and_then(|p| p.parse::<u16>().ok());
+    let mut ports = Vec::new();
+    if let Some(p) = env_port {
+        ports.push(p);
+    }
+    if !ports.contains(&3000) {
+        ports.push(3000);
+    }
+    ports.push(0);
+
+    let mut listener = None;
+    for port in ports {
+        let addr = format!("0.0.0.0:{port}");
+        match tokio::net::TcpListener::bind(&addr).await {
+            Ok(l) => {
+                listener = Some(l);
+                break;
+            }
+            Err(_) if port != 0 => continue,
+            Err(e) => panic!("Failed to bind to any port: {e}"),
+        }
+    }
+
+    let listener = listener.unwrap();
+    let local_addr = listener.local_addr().unwrap();
+    let port = local_addr.port();
+
+    println!("🚀 BTerminal is running on http://localhost:{port}");
     println!("Press Ctrl+C to stop the server");
     
     axum::serve(listener, app).await.unwrap();

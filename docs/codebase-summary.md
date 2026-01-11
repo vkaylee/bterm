@@ -1,7 +1,7 @@
 # Codebase Summary
 
 ## Backend (Rust)
-- `src/main.rs`: Entry point, Axum server setup, and static asset embedding.
+- `src/main.rs`: Entry point. Sets up the Axum server with dynamic port selection (Env > 3000 > Random), configures CORS, and serves embedded static assets.
 - `src/api.rs`: REST API endpoints for session management (List, Create, Delete).
 - `src/ws.rs`: WebSocket handler for terminal I/O and PTY resizing.
 - **`src/session.rs`**: Quản lý vòng đời session. Bao gồm `SessionRegistry` để lưu trữ các session đang hoạt động và hàm `monitor_session` để quản lý lịch sử và tự động dọn dẹp tài nguyên khi shell kết thúc.

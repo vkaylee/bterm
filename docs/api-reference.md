@@ -2,6 +2,16 @@
 
 BTerminal sử dụng kết hợp REST API để quản lý phiên và WebSockets để truyền dữ liệu terminal.
 
+## Server Initialization
+
+The BTerminal server uses a dynamic port selection strategy:
+
+1.  **Environment Variable**: Uses the value of `PORT` if defined.
+2.  **Default Port**: Falls back to port `3000`.
+3.  **Automatic Fallback**: If the above ports are in use, the system automatically binds to any available port (assigned by the OS).
+
+The actual bound address is printed to stdout upon successful startup (e.g., `🚀 BTerminal is running on http://localhost:45937`).
+
 ## REST API
 
 ### GET `/api/sessions`
