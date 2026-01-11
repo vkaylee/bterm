@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Terminal Layout Fix**: Resolved a critical layout issue where the terminal would not fill the container width. Upgraded to the official `@xterm/addon-fit` (v0.8.0) to ensure compatibility with `xterm` v5.x and fixed internal property access errors (`_viewport`).
+- **Robust Fit Logic**: Implemented a retry mechanism in the frontend to ensure the terminal resizing logic (`fit()`) only executes when the renderer viewport is fully initialized, preventing crashes and race conditions.
+- **Terminal Layout Tests**: Added `e2e/tests/terminal-layout.spec.ts` to verify full-width/height utilization (98%+) and window resize responsiveness across all rendering tiers.
+- **Desktop Font Adjustment**: Optimized the desktop terminal font size to **15px** (previously 16px) for better information density while maintaining readability.
+
+### Added
 - **3-Tier Renderer Fallback**: Implemented a robust rendering strategy that prioritizes WebGL (via `@xterm/addon-webgl`) for maximum performance, automatically falls back to Canvas (`@xterm/addon-canvas`) if WebGL fails, and finally to the DOM renderer for universal compatibility.
 - **Robust Feature Detection**: Added proactive context checks (`webgl2`, `2d`) to prevent silent failures and race conditions during renderer initialization.
 - **Renderer E2E Suite**: Added `e2e/tests/renderer-fallback.spec.ts` to verify automatic failover logic across all three rendering tiers.
