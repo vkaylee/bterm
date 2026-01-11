@@ -5,8 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- **UI:** Tự động kết nối (Auto-join) vào session ngay sau khi tạo thành công, loại bỏ bước trung gian.
-- **UI:** Thiết kế lại Header chuyên nghiệp tích hợp thông tin Session ID, trạng thái kết nối (Pulse indicator) và logo mới.
+- **Core:** Tín hiệu JSON Exit chủ động từ Backend khi PTY process kết thúc.
+- **UI:** Tự động quay về Dashboard khi gõ `exit` trong Terminal.
+- **UX Mobile:** Tự động cuộn ô nhập liệu (`scrollIntoView`) khi bàn phím ảo xuất hiện để tránh che khuất input.
+- **Tests:** Bổ sung unit test Backend cho PTY termination và E2E test cho luồng tự động thoát.
+- **UI:** Tự động kết nối (Auto-join) vào session ngay sau khi tạo thành công.
 - **UI:** Tái cấu trúc Dashboard theo hướng "Nội dung trước" (Content-first): đưa danh sách Active Sessions lên đầu và phần tạo mới xuống cuối.
 - **UI:** Thêm bộ đếm Session hoạt động và giao diện "Empty State" sinh động khi không có session nào.
 - **Mobile UI:** Thiết kế lại thanh điều khiển di động thành 2 hàng (7 cột mỗi hàng) tối ưu diện tích.

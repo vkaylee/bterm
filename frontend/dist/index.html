@@ -98,6 +98,7 @@
                         </div>
                         <div class="flex flex-col gap-3 sm:flex-row">
                             <input type="text" id="new-session-name" placeholder="E.g. production-logs, dev-server..." 
+                                   onfocus="this.scrollIntoView({ behavior: 'smooth', block: 'center' })"
                                    class="bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition text-gray-200 placeholder:text-slate-600">
                             <button onclick="createSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 group">
                                 <span>Create Session</span>
@@ -170,28 +171,37 @@
             const viewport = window.visualViewport;
             const controlBar = document.getElementById('control-bar');
             const terminalView = document.getElementById('terminal-view');
+            const dashboard = document.getElementById('dashboard');
             
-            if (!viewport || !controlBar || terminalView.style.display !== 'flex') return;
+            if (!viewport) return;
 
-            // Tính toán khoảng cách bị che khuất bởi bàn phím
-            // window.innerHeight là chiều cao layout, viewport.height là chiều cao thực tế nhìn thấy
-            const offset = window.innerHeight - viewport.height - viewport.offsetTop;
-            
-            // Đẩy thanh điều khiển lên trên bàn phím
-            if (offset > 0) {
-                controlBar.style.transform = `translateY(-${offset}px)`;
-            } else {
-                controlBar.style.transform = 'none';
-            }
+            if (terminalView.style.display === 'flex' && controlBar) {
+                // Tính toán khoảng cách bị che khuất bởi bàn phím
+                const offset = window.innerHeight - viewport.height - viewport.offsetTop;
+                
+                // Đẩy thanh điều khiển lên trên bàn phím
+                if (offset > 0) {
+                    controlBar.style.transform = `translateY(-${offset}px)`;
+                } else {
+                    controlBar.style.transform = 'none';
+                }
 
-            // Fit lại terminal để không bị lấp mất dòng cuối
-            if (term && fitAddon) {
-                try { 
-                    fitAddon.fit(); 
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
-                    }
-                } catch(e) {}
+                // Fit lại terminal
+                if (term && fitAddon) {
+                    try { 
+                        fitAddon.fit(); 
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                        }
+                    } catch(e) {}
+                }
+            } else if (dashboard && !dashboard.classList.contains('hidden')) {
+                // Khi ở Dashboard, đảm bảo phần tử focus được nhìn thấy
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                    setTimeout(() => {
+                        document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                }
             }
         }
 
@@ -327,8 +337,26 @@
             ws.binaryType = 'arraybuffer';
 
             ws.onopen = () => { doFit(); };
-            ws.onmessage = (e) => { term.write(new Uint8Array(e.data)); };
+            ws.onmessage = (e) => { 
+                if (typeof e.data === 'string') {
+                    try {
+                        const msg = JSON.parse(e.data);
+                        if (msg.type === 'Exit') {
+                            console.log("Session exited by shell");
+                            backToDashboard();
+                        }
+                    } catch(err) { console.error("Parse signal error", err); }
+                } else {
+                    term.write(new Uint8Array(e.data)); 
+                }
+            };
             ws.onerror = (err) => { console.error("WS Error", err); };
+            ws.onclose = () => { 
+                console.log("Session connection closed");
+                // Optional: If connection closed WITHOUT an Exit signal, it might be a network error
+                // We could show a "Reconnecting" UI here, but for now we'll just stay on the screen
+                // or redirect if the server is gone.
+            };
             
             term.onData(data => {
                 if (ws && ws.readyState === WebSocket.OPEN) {

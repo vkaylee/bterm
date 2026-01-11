@@ -49,6 +49,9 @@ impl SessionRegistry {
             loop {
                 match rx.recv().await {
                     Ok(data) => {
+                        if data.is_empty() {
+                            break; // Stop tracking history for this session
+                        }
                         let mut buffer = history_clone.lock().unwrap();
                         buffer.extend_from_slice(&data);
                         let len = buffer.len();

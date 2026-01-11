@@ -112,4 +112,12 @@ test.describe('Mobile UI & Keyboard Overlay', () => {
     const transform = await controlBar.evaluate(el => el.style.transform);
     expect(transform).toBe('none');
   });
+
+  test('should have scrollIntoView behavior on session input for mobile accessibility', async ({ page }) => {
+    // Go back to dashboard to see the input
+    await page.click('button[title="Exit Session"]');
+    const input = page.locator('#new-session-name');
+    const onfocus = await input.getAttribute('onfocus');
+    expect(onfocus).toContain('scrollIntoView');
+  });
 });

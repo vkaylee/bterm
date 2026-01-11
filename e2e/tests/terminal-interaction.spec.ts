@@ -17,9 +17,12 @@ test.describe('Terminal Interaction', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    // Clean up: go back to dashboard and delete the session
-    await page.click('button[title="Exit Session"]'); // Back to dashboard
-    await page.waitForSelector('#dashboard');
+    // Clean up: go back to dashboard if not already there, and delete the session
+    const isDashboardVisible = await page.locator('#dashboard').isVisible();
+    if (!isDashboardVisible) {
+        await page.click('button[title="Exit Session"]'); // Back to dashboard
+        await page.waitForSelector('#dashboard');
+    }
     
     const sessionCardToDelete = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
     await expect(sessionCardToDelete).toBeVisible(); // Ensure it's visible before trying to delete
@@ -62,7 +65,24 @@ test.describe('Terminal Interaction', () => {
     );
 
     // Verify the output
-    const terminalContent = await page.$eval('#terminal .xterm-rows', el => el.textContent);
-    expect(terminalContent).toContain(expectedOutput);
-  });
-});
+        const terminalContent = await page.$eval('#terminal .xterm-rows', el => el.textContent);
+        expect(terminalContent).toContain(expectedOutput);
+      });
+    
+      test('should automatically exit terminal on shell exit', async ({ page }) => {
+        // Focus terminal
+        await page.click('#terminal');
+        
+        // Type 'exit' and Enter
+        await page.keyboard.type('exit');
+        await page.keyboard.press('Enter');
+    
+        // Wait for dashboard to become visible (proving the auto-exit worked)
+        // We increase timeout as 'exit' might take a moment to propagate
+        await expect(page.locator('#dashboard')).toBeVisible({ timeout: 5000 });
+        
+        // Check if session-info is hidden
+        await expect(page.locator('#session-info')).toBeHidden();
+      });
+    });
+    

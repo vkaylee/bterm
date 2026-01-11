@@ -56,6 +56,8 @@ impl PtyManager {
                     }
                 }
                 println!("PTY Reader thread exiting.");
+                // Send an empty vector to signal termination to subscribers
+                let _ = tx.send(Vec::new());
             });
         }
     }
@@ -78,6 +80,50 @@ impl PtyManager {
             pixel_height: 0,
         })?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::broadcast;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_pty_termination_signal() {
+        let pty = PtyManager::new();
+        let (tx, mut rx) = broadcast::channel(10);
+        
+        // Start reading
+        pty.start_reader(tx);
+        
+        // Send 'exit\n' to the PTY
+        pty.write(b"exit\n").unwrap();
+        
+        let mut found_termination = false;
+        let timeout = tokio::time::sleep(Duration::from_secs(5));
+        tokio::pin!(timeout);
+
+        loop {
+            tokio::select! {
+                msg = rx.recv() => {
+                    match msg {
+                        Ok(data) => {
+                            if data.is_empty() {
+                                found_termination = true;
+                                break;
+                            }
+                        }
+                        Err(_) => break,
+                    }
+                }
+                _ = &mut timeout => {
+                    break;
+                }
+            }
+        }
+
+        assert!(found_termination, "Should have received an empty vector termination signal");
     }
 }
 

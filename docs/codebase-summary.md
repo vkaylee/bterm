@@ -16,4 +16,7 @@
   - **Mobile Logic**: Uses `VisualViewport API` for layout adjustment and "Sticky Modifiers" for complex key combinations.
 
 ## Testing
-- `e2e/tests/`: Playwright end-to-end tests covering session management, terminal interaction, and mobile UI responsiveness.
+  - **`session-management.spec.ts`**: CRUD operations on sessions.
+  - **`terminal-interaction.spec.ts`**: Data flow, shell execution, and **auto-exit verification**.
+  - **`mobile-ui.spec.ts`**: Responsive design, visual viewport handling, and **input accessibility**.
+

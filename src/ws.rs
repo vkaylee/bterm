@@ -57,12 +57,18 @@ async fn handle_socket(socket: WebSocket, session: Session) {
     // Spawn a task to forward PTY output to WebSocket
     let mut send_task = tokio::spawn(async move {
         while let Ok(data) = rx.recv().await {
+            if data.is_empty() {
+                break; // PTY ended
+            }
             let bin_data: Vec<u8> = data;
             if let Err(e) = sender.send(Message::Binary(bin_data.into())).await {
                 println!("WS send error: {e}");
-                break;
+                return;
             }
         }
+        
+        // If we reach here, it means the broadcast channel is closed or we got an empty signal
+        let _ = sender.send(Message::Text(r#"{"type": "Exit"}"#.into())).await;
     });
 
     // Handle incoming messages from WebSocket
