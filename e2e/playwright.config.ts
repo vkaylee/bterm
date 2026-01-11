@@ -37,11 +37,8 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: 'WebGL',
-      use: { 
-        ...devices['Desktop Chrome'],
-        baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=webgl` : undefined,
-      },
+      name: 'Canvas',
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'DOM-Fallback',

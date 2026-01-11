@@ -60,8 +60,6 @@ export const test = base.extend<{}, WorkerFixtures>({
     let url = server.url;
     if (testInfo.project.name === 'DOM-Fallback') {
       url += '?renderer=dom';
-    } else if (testInfo.project.name === 'WebGL') {
-      url += '?renderer=webgl';
     }
     await use(url);
   },

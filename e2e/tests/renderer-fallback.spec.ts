@@ -2,12 +2,13 @@ import { test, expect } from '../fixtures';
 
 test.describe('Terminal Renderer Strategy', () => {
   
-  test('should support WebGL renderer when requested', async ({ page }, testInfo) => {
+  test('should use Canvas renderer by default', async ({ page }, testInfo) => {
+    page.on('console', msg => console.log(`[BROWSER] ${msg.type()}: ${msg.text()}`));
     // 1. Navigate to the app
     await page.goto('');
     
     // 2. Create a session to ensure terminal is initialized
-    await page.locator('#new-session-name').fill('webgl-test-session');
+    await page.locator('#new-session-name').fill('canvas-test-session');
     await page.locator('button', { hasText: 'Create Session' }).click();
     
     // 3. Wait for terminal to be visible
@@ -24,50 +25,43 @@ test.describe('Terminal Renderer Strategy', () => {
         return !!renderer && (renderer._value !== null);
     }, { timeout: 5000 });
 
-    // 4. Verify renderer type
-    const rendererInfo = await page.evaluate(() => {
+    // 4. Verify renderer type by checking DOM structure
+    const renderType = await page.evaluate(() => {
         // @ts-ignore
         const term = window.term;
-        if (!term) return { type: 'NoTerminal' };
+        if (!term) return 'NoTerminal';
         
-        // @ts-ignore
-        const renderService = term._core._renderService;
-        let renderer = renderService._renderer;
+        const textCanvas = document.querySelector('.xterm-text-layer');
+        const canvasElements = document.querySelectorAll('.xterm-screen canvas');
         
-        // Handle Observable wrapper if present
-        if (renderer && renderer._value) {
-            renderer = renderer._value;
+        if (textCanvas || canvasElements.length > 0) {
+             // If there are canvas elements in xterm-screen, it's likely Canvas/WebGL renderer
+             // DOM renderer might use canvas for cursor/link/selection?
+             // But xterm-addon-canvas uses a specific text layer canvas.
+             return 'Canvas';
         }
-        
-        if (!renderer) return { type: 'NoRenderer' };
-        
-        return {
-            rendererConstructor: renderer.constructor ? renderer.constructor.name : 'NoConstructor',
-            isMock: !!renderer.terminal || !!renderer._terminal,
-            keys: Object.keys(renderer)
-        };
+        return 'DOM';
     });
 
-    // Check if it's WebGL based on constructor name OR our mock indicator
-    const isWebgl = rendererInfo.rendererConstructor === 'WebglRenderer' || 
-                   rendererInfo.rendererConstructor === 'MockWebglRenderer' ||
-                   rendererInfo.isMock;
+    console.log(`Detected Render Type for ${testInfo.project.name}:`, renderType);
+
+    const isCanvas = renderType === 'Canvas';
     
-    // Only expect WebGL if the project is WebGL
-    if (testInfo.project.name === 'WebGL') {
-        expect(isWebgl).toBe(true);
+    // Only expect Canvas if the project is Canvas
+    if (testInfo.project.name === 'Canvas') {
+        expect(isCanvas).toBe(true);
     } else {
-        expect(isWebgl).toBe(false);
+        expect(isCanvas).toBe(false);
     }
   });
 
-  test('should fallback to DOM renderer when WebGL is not supported', async ({ page }) => {
-    // 1. Mock WebGL failure BEFORE page load
+  test('should fallback to DOM renderer when Canvas is not supported', async ({ page }) => {
+    // 1. Mock Canvas failure BEFORE page load
     await page.addInitScript(() => {
         const originalGetContext = HTMLCanvasElement.prototype.getContext;
         // @ts-ignore
         HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-            if (type === 'webgl' || type === 'webgl2') {
+            if (type === '2d') {
                 return null;
             }
             return originalGetContext.call(this, type, ...args);
@@ -93,11 +87,10 @@ test.describe('Terminal Renderer Strategy', () => {
         
         // @ts-ignore
         const renderer = term._core._renderService._renderer;
-        // DOM renderer usually doesn't have 'WebglRenderer' name
         return renderer.constructor.name;
     });
 
-    expect(rendererName).not.toBe('WebglRenderer');
+    expect(rendererName).not.toBe('CanvasRenderer');
   });
 
 });

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./assets/xterm.css" />
     <script src="./assets/xterm.js"></script>
     <script src="./assets/xterm-addon-fit.js"></script>
-    <script src="./assets/xterm-addon-webgl.js"></script>
+    <script src="./assets/xterm-addon-canvas.js"></script>
     <style>
         @font-face {
             font-family: 'JetBrains Mono';
@@ -342,22 +342,22 @@
 
             term.loadAddon(fitAddon);
             
-            // Kích hoạt WebGL Renderer (Đã vô hiệu hóa vì lỗi MockRenderer trên desktop)
+            // Kích hoạt Canvas Renderer để tăng hiệu suất (trừ khi bị force DOM qua URL)
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('renderer') === 'webgl') {
+            const forceDom = urlParams.get('renderer') === 'dom';
+            
+            if (!forceDom) {
                 try {
-                    const webglAddon = new WebglAddon.WebglAddon();
-                    webglAddon.onContextLoss(() => {
-                        console.warn("WebGL context lost, disposing addon");
-                        webglAddon.dispose();
-                    });
-                    term.loadAddon(webglAddon);
-                    console.log("WebGL renderer enabled (Manual force)");
+                    // Check if CanvasAddon is the class itself or a namespace
+                    const AddonConstructor = (typeof CanvasAddon === 'function') ? CanvasAddon : CanvasAddon.CanvasAddon;
+                    const canvasAddon = new AddonConstructor();
+                    term.loadAddon(canvasAddon);
+                    console.log("Canvas renderer enabled");
                 } catch (e) {
-                    console.warn("WebGL addon failed to load", e);
+                    console.warn("Canvas addon failed to load, falling back to DOM renderer", e);
                 }
             } else {
-                console.log("Using standard DOM renderer");
+                console.log("Forcing DOM renderer via URL parameter");
             }
 
             term.open(container);
