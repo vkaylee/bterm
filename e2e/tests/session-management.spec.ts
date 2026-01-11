@@ -60,7 +60,11 @@ test.describe('Session Management', () => {
   });
 
   test('should hide active sessions section when no sessions exist', async ({ page }) => {
-    await page.goto('/');
+    // Wait for the initial session fetch to complete
+    await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/api/sessions') && resp.request().method() === 'GET'),
+      page.goto('/')
+    ]);
     
     // Initially, there should be no sessions in the isolated backend
     await expect(page.locator('#active-sessions-section')).toBeHidden();
