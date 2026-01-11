@@ -125,6 +125,18 @@ mod tests {
 
         assert!(found_termination, "Should have received an empty vector termination signal");
     }
+
+    #[test]
+    fn test_pty_write_and_resize() {
+        let pty = PtyManager::default();
+        
+        // Test write
+        assert!(pty.write(b"ls\n").is_ok());
+        
+        // Test resize
+        assert!(pty.resize(24, 80).is_ok());
+        assert!(pty.resize(40, 120).is_ok());
+    }
 }
 
 impl Default for PtyManager {

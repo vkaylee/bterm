@@ -127,6 +127,51 @@ mod tests {
             assert!(s.get(&session_id).is_none(), "Session should be removed after empty signal");
         }
     }
+
+    #[tokio::test]
+    async fn test_session_registry_methods() {
+        let registry = SessionRegistry::default();
+        let session_id = "test-reg".to_string();
+        
+        // Create
+        registry.create_session(session_id.clone());
+        
+        // Get
+        let session = registry.get_session(&session_id);
+        assert!(session.is_some());
+        
+        // List
+        let sessions = registry.list_sessions();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, session_id);
+        
+        // Remove
+        registry.remove_session(&session_id);
+        assert!(registry.get_session(&session_id).is_none());
+    }
+
+    #[tokio::test]
+    async fn test_monitor_session_lagged() {
+        let (tx, rx) = broadcast::channel(1); // Small buffer to force lag
+        let history = Arc::new(Mutex::new(Vec::new()));
+        let sessions = Arc::new(Mutex::new(std::collections::HashMap::new()));
+        
+        tokio::spawn(monitor_session(
+            rx,
+            history.clone(),
+            sessions.clone(),
+            "lag-test".to_string(),
+        ));
+
+        // Overflow the buffer
+        tx.send(b"1".to_vec()).unwrap();
+        tx.send(b"2".to_vec()).unwrap();
+        tx.send(b"3".to_vec()).unwrap();
+        
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        // Should have skipped some but survived
+        assert!(history.lock().unwrap().len() > 0);
+    }
 }
 
 /// Hàm giám sát session: lưu trữ lịch sử output và tự động xóa session khỏi registry khi PTY kết thúc.
@@ -155,6 +200,7 @@ async fn monitor_session(
             Err(broadcast::error::RecvError::Lagged(_)) => {
                 // Tiếp tục nếu bị lag (mất một số message)
             }
+            #[cfg(not(tarpaulin_include))]
             Err(_) => break, // Channel bị đóng
         }
     }

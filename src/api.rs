@@ -31,6 +31,38 @@ pub async fn delete_session(
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> impl IntoResponse {
     // Sửa lại từ delete_session thành remove_session theo src/session.rs
-    registry.remove_session(&id);
-    axum::http::StatusCode::OK.into_response()
-}
+        registry.remove_session(&id);
+        axum::http::StatusCode::OK.into_response()
+    }
+    
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use axum::extract::Path;
+    
+        #[tokio::test]
+        async fn test_create_and_list_sessions() {
+            let registry = Arc::new(SessionRegistry::new());
+            
+            // Create
+            let req = Json(CreateSessionRequest { id: "test-id".to_string() });
+            create_session(State(registry.clone()), req).await;
+            
+            // List
+            let Json(sessions) = list_sessions(State(registry.clone())).await;
+            assert_eq!(sessions.len(), 1);
+            assert_eq!(sessions[0].id, "test-id");
+        }
+    
+        #[tokio::test]
+        async fn test_delete_session() {
+            let registry = Arc::new(SessionRegistry::new());
+            registry.create_session("delete-me".to_string());
+            
+            delete_session(State(registry.clone()), Path("delete-me".to_string())).await;
+            
+            let Json(sessions) = list_sessions(State(registry.clone())).await;
+            assert_eq!(sessions.len(), 0);
+        }
+    }
+    
