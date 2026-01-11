@@ -2,6 +2,9 @@
 #![allow(unexpected_cfgs)]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::must_use_candidate)]
 
 pub mod pty_manager;
 pub mod session;
@@ -37,8 +40,7 @@ pub struct AppState {
     pub tx: broadcast::Sender<GlobalEvent>,
 }
 
-pub fn create_app(registry: Arc<SessionRegistry>) -> Router {
-    let (tx, _rx) = broadcast::channel(100);
+pub fn create_app(tx: broadcast::Sender<GlobalEvent>, registry: Arc<SessionRegistry>) -> Router {
     let state = Arc::new(AppState { registry, tx });
 
     Router::new()
@@ -93,8 +95,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_index() {
-        let registry = Arc::new(SessionRegistry::new());
-        let app = create_app(registry);
+        let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
+        let app = create_app(tx, registry);
 
         let response = app
             .oneshot(Request::builder().uri("/").body(axum::body::Body::empty()).unwrap())
@@ -108,8 +111,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_missing_file_falls_back_to_index() {
-        let registry = Arc::new(SessionRegistry::new());
-        let app = create_app(registry);
+        let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
+        let app = create_app(tx, registry);
 
         let response = app
             .oneshot(Request::builder().uri("/random-path").body(axum::body::Body::empty()).unwrap())
@@ -123,8 +127,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_missing_file_with_extension_returns_404() {
-        let registry = Arc::new(SessionRegistry::new());
-        let app = create_app(registry);
+        let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
+        let app = create_app(tx, registry);
 
         let response = app
             .oneshot(Request::builder().uri("/missing.css").body(axum::body::Body::empty()).unwrap())
@@ -136,8 +141,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_index_explicit() {
-        let registry = Arc::new(SessionRegistry::new());
-        let app = create_app(registry);
+        let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
+        let app = create_app(tx, registry);
 
         let response = app
             .oneshot(Request::builder().uri("/index.html").body(axum::body::Body::empty()).unwrap())
@@ -149,8 +155,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_asset() {
-        let registry = Arc::new(SessionRegistry::new());
-        let app = create_app(registry);
+        let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
+        let app = create_app(tx, registry);
 
         // Request an asset that exists in frontend/dist/assets/
         let response = app

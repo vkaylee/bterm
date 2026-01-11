@@ -45,12 +45,11 @@ async fn handle_socket(socket: WebSocket, session: Session) {
         }
     };
 
-    if let Some(data) = history_data {
-        if let Err(e) = sender.send(Message::Binary(data.into())).await {
-            #[cfg(not(tarpaulin_include))]
-            println!("Error sending history: {e}");
-            return;
-        }
+    if let Some(data) = history_data
+        && let Err(e) = sender.send(Message::Binary(data.into())).await {
+        #[cfg(not(tarpaulin_include))]
+        println!("Error sending history: {e}");
+        return;
     }
 
     let mut rx = session.broadcast_tx.subscribe();
@@ -76,20 +75,20 @@ async fn handle_socket(socket: WebSocket, session: Session) {
     // Handle incoming messages from WebSocket
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
-            if let Message::Text(text) = msg {
-                if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
-                    match client_msg {
-                        ClientMessage::Input(data) => {
-                            if let Err(e) = pty.write(data.as_bytes()) {
-                                #[cfg(not(tarpaulin_include))]
-                                println!("PTY write error: {e}");
-                            }
+            if let Message::Text(text) = msg
+                && let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text)
+            {
+                match client_msg {
+                    ClientMessage::Input(data) => {
+                        if let Err(e) = pty.write(data.as_bytes()) {
+                            #[cfg(not(tarpaulin_include))]
+                            println!("PTY write error: {e}");
                         }
-                        ClientMessage::Resize { rows, cols } => {
-                            if let Err(e) = pty.resize(rows, cols) {
-                                #[cfg(not(tarpaulin_include))]
-                                println!("PTY resize error: {e}");
-                            }
+                    }
+                    ClientMessage::Resize { rows, cols } => {
+                        if let Err(e) = pty.resize(rows, cols) {
+                            #[cfg(not(tarpaulin_include))]
+                            println!("PTY resize error: {e}");
                         }
                     }
                 }
@@ -106,99 +105,261 @@ async fn handle_socket(socket: WebSocket, session: Session) {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+
     use axum::http::StatusCode;
+
     use axum::{routing::get, Router};
+
     use crate::session::SessionRegistry;
+
     use tokio::sync::broadcast;
 
-    fn setup_state() -> Arc<AppState> {
-        let registry = Arc::new(SessionRegistry::new());
-        let (tx, _) = broadcast::channel(10);
-        Arc::new(AppState { registry, tx })
-    }
+
+
+        fn setup_state() -> Arc<AppState> {
+
+
+
+            let (tx, _) = broadcast::channel(10);
+
+
+
+            let registry = Arc::new(SessionRegistry::new(tx.clone()));
+
+
+
+            Arc::new(AppState { registry, tx })
+
+
+
+        }
+
+
 
     #[test]
+
     fn test_client_message_deserialization() {
+
         let input_json = r#"{"type": "Input", "data": "ls\n"}"#;
+
         let msg: ClientMessage = serde_json::from_str(input_json).unwrap();
+
         match msg {
+
             ClientMessage::Input(data) => assert_eq!(data, "ls\n"),
-            _ => panic!("Expected Input"),
+
+            ClientMessage::Resize { .. } => panic!("Expected Input"),
+
         }
+
+
 
         let resize_json = r#"{"type": "Resize", "data": {"rows": 24, "cols": 80}}"#;
+
         let msg: ClientMessage = serde_json::from_str(resize_json).unwrap();
+
         match msg {
+
             ClientMessage::Resize { rows, cols } => {
+
                 assert_eq!(rows, 24);
+
                 assert_eq!(cols, 80);
+
             }
-            _ => panic!("Expected Resize"),
+
+            ClientMessage::Input(_) => panic!("Expected Resize"),
+
         }
+
     }
 
-    #[tokio::test]
-    async fn test_ws_handler_not_found() {
-        use tokio_tungstenite::connect_async;
-        use tokio::net::TcpListener;
 
-        let state = setup_state();
-        let app = Router::new()
-            .route("/ws/{session_id}", get(ws_handler))
-            .with_state(state);
+
+        #[tokio::test]
+
+
+
+        #[allow(clippy::literal_string_with_formatting_args)]
+
+
+
+        async fn test_ws_handler_not_found() {
+
+
+
+            use tokio_tungstenite::connect_async;
+
+
+
+            use tokio::net::TcpListener;
+
+
+
+    
+
+
+
+            let state = setup_state();
+
+
+
+            let app = Router::new()
+
+
+
+                .route("/ws/{session_id}", get(ws_handler))
+
+
+
+                .with_state(state);
+
+
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+
         let addr = listener.local_addr().unwrap();
+
         
+
         tokio::spawn(async move {
+
             axum::serve(listener, app).await.unwrap();
+
         });
 
-        let url = format!("ws://{}:{}/ws/invalid", addr.ip(), addr.port());
+
+
+        let url = format!("ws://{addr}/ws/invalid");
+
         let result = connect_async(url).await;
+
         match result {
+
             Err(tokio_tungstenite::tungstenite::Error::Http(resp)) => {
+
                 assert_eq!(resp.status(), StatusCode::OK);
+
                 let body = resp.into_body().unwrap();
-                assert_eq!(body, "Session not found".as_bytes().to_vec());
+
+                assert_eq!(body, b"Session not found");
+
             }
-            _ => panic!("Expected HTTP error with Session not found message, got {:?}", result),
+
+            _ => panic!("Expected HTTP error with Session not found message, got {result:?}"),
+
         }
+
     }
 
-    #[tokio::test]
-    async fn test_ws_history_sent() {
-        use tokio_tungstenite::connect_async;
-        use tokio::net::TcpListener;
 
-        let state = setup_state();
-        let session_id = "history-test".to_string();
-        let session = state.registry.create_session(session_id.clone());
-        
-        // Add some history
-        {
-            let mut history = session.history.lock().unwrap();
-            history.extend_from_slice(b"old data");
-        }
 
-        let app = Router::new()
-            .route("/ws/{session_id}", get(ws_handler))
-            .with_state(state);
+        #[tokio::test]
+
+
+
+        #[allow(clippy::literal_string_with_formatting_args)]
+
+
+
+        async fn test_ws_history_sent() {
+
+
+
+            use tokio_tungstenite::connect_async;
+
+
+
+            use tokio::net::TcpListener;
+
+
+
+    
+
+
+
+            let state = setup_state();
+
+
+
+            let session_id = "history-test".to_string();
+
+
+
+            let session = state.registry.create_session(session_id.clone());
+
+
+
+            
+
+
+
+            // Add some history
+
+
+
+            {
+
+
+
+                let mut history = session.history.lock().unwrap();
+
+
+
+                history.extend_from_slice(b"old data");
+
+
+
+            }
+
+
+
+    
+
+
+
+            let app = Router::new()
+
+
+
+                .route("/ws/{session_id}", get(ws_handler))
+
+
+
+                .with_state(state);
+
+
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+
         let addr = listener.local_addr().unwrap();
+
         
+
         tokio::spawn(async move {
+
             axum::serve(listener, app).await.unwrap();
+
         });
 
-        let url = format!("ws://{}:{}/ws/{}", addr.ip(), addr.port(), session_id);
+
+
+        let url = format!("ws://{addr}/ws/{session_id}");
+
         let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+
         let (_, mut read) = ws_stream.split();
 
+
+
         // First message should be the history
+
         let msg = read.next().await.unwrap().unwrap();
+
         assert_eq!(msg.into_data().as_ref(), b"old data");
+
     }
+
 }

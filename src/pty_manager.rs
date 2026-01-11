@@ -68,6 +68,7 @@ impl PtyManager {
         let mut writer = self.writer.lock().unwrap();
         writer.write_all(data)?;
         writer.flush()?;
+        drop(writer);
         Ok(())
     }
 
@@ -79,7 +80,14 @@ impl PtyManager {
             pixel_width: 0,
             pixel_height: 0,
         })?;
+        drop(master);
         Ok(())
+    }
+}
+
+impl Default for PtyManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -117,7 +125,7 @@ mod tests {
                         Err(_) => break,
                     }
                 }
-                _ = &mut timeout => {
+                () = &mut timeout => {
                     break;
                 }
             }
@@ -136,11 +144,5 @@ mod tests {
         // Test resize
         assert!(pty.resize(24, 80).is_ok());
         assert!(pty.resize(40, 120).is_ok());
-    }
-}
-
-impl Default for PtyManager {
-    fn default() -> Self {
-        Self::new()
     }
 }

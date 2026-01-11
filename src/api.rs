@@ -47,9 +47,8 @@ pub async fn events_handler(
 
     let stream = async_stream::stream! {
         while let Ok(msg) = rx.recv().await {
-            match serde_json::to_string(&msg) {
-                Ok(data) => yield Ok(Event::default().data(data)),
-                Err(_) => continue,
+            if let Ok(data) = serde_json::to_string(&msg) {
+                yield Ok(Event::default().data(data));
             }
         }
     };
@@ -65,8 +64,8 @@ mod tests {
     use tokio::sync::broadcast;
 
     fn setup() -> Arc<AppState> {
-        let registry = Arc::new(SessionRegistry::new());
         let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
         Arc::new(AppState { registry, tx })
     }
 
@@ -87,7 +86,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_session() {
         let state = setup();
-        state.registry.create_session("delete-me".to_string());
+        let _ = state.registry.create_session("delete-me".to_string());
         
         delete_session(State(state.clone()), Path("delete-me".to_string())).await;
         

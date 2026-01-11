@@ -18,7 +18,14 @@
 
 ## Luồng dữ liệu (Data Flow)
 1. **PTY Output -> Clients:**
-   ...
+   - PTY Process tạo output bytes.
+   - Một luồng (thread) đọc output và gửi vào `tokio::sync::broadcast` channel của session.
+   - Hàm `monitor_session` lắng nghe channel này để:
+     - Cập nhật buffer lịch sử (100KB gần nhất).
+     - Phát hiện **Termination Signal** (vector rỗng) và:
+       - Tự động xóa session khỏi `SessionRegistry`.
+       - Phát một sự kiện `SessionDeleted` tới **Global Broadcast Channel** để thông báo cho toàn bộ các Dashboard đang mở (qua SSE).
+   - `ws_handler` nhận tín hiệu này qua channel, thoát vòng lặp binary và gửi gói tin JSON `{"type": "Exit"}` tới Browser trước khi đóng socket.
 2. **Client Input -> PTY:**
    ...
 3. **Terminal Resizing:**

@@ -10,12 +10,12 @@ use tokio::sync::broadcast;
 
 #[tokio::test]
 async fn test_websocket_flow() {
-    let registry = Arc::new(SessionRegistry::new());
     let (tx, _) = broadcast::channel(10);
+    let registry = Arc::new(SessionRegistry::new(tx.clone()));
     let state = Arc::new(AppState { registry: registry.clone(), tx });
     
     let session_id = "ws-test".to_string();
-    registry.create_session(session_id.clone());
+    let _ = registry.create_session(session_id.clone());
 
     let app = Router::new()
         .route("/ws/{session_id}", get(ws_handler))

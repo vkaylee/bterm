@@ -4,8 +4,9 @@ use bterminal::{create_app, session::SessionRegistry};
 #[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() {
-    let registry = Arc::new(SessionRegistry::new());
-    let app = create_app(registry);
+    let (tx, _rx) = tokio::sync::broadcast::channel(100);
+    let registry = Arc::new(SessionRegistry::new(tx.clone()));
+    let app = create_app(tx, registry);
 
     let listener = bind_listener().await;
     let local_addr = listener.local_addr().unwrap();
