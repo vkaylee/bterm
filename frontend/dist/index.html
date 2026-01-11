@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="./assets/xterm.css" />
     <script src="./assets/xterm.js"></script>
     <script src="./assets/xterm-addon-fit.js"></script>
+    <script src="./assets/xterm-addon-webgl.js"></script>
     <style>
         @font-face {
             font-family: 'JetBrains Mono';
@@ -340,15 +341,39 @@
             window.fitAddon = fitAddon;
 
             term.loadAddon(fitAddon);
+            
+            // Kích hoạt WebGL Renderer (Đã vô hiệu hóa vì lỗi MockRenderer trên desktop)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('renderer') === 'webgl') {
+                try {
+                    const webglAddon = new WebglAddon.WebglAddon();
+                    webglAddon.onContextLoss(() => {
+                        console.warn("WebGL context lost, disposing addon");
+                        webglAddon.dispose();
+                    });
+                    term.loadAddon(webglAddon);
+                    console.log("WebGL renderer enabled (Manual force)");
+                } catch (e) {
+                    console.warn("WebGL addon failed to load", e);
+                }
+            } else {
+                console.log("Using standard DOM renderer");
+            }
+
             term.open(container);
             
             // Đảm bảo terminal chiếm toàn bộ không gian
             const doFit = () => {
                 if (!term || !fitAddon || !container.offsetParent) return;
                 try { 
-                    fitAddon.fit(); 
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                    // Kiểm tra xem renderer đã sẵn sàng chưa bằng cách check dimensions
+                    if (term._core && term._core._renderService && term._core._renderService.dimensions) {
+                        fitAddon.fit(); 
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                        }
+                    } else {
+                        console.warn("RenderService not ready for fit");
                     }
                 } catch(e) {
                     console.warn("Fit failed", e);
@@ -369,7 +394,6 @@
                     try {
                         const msg = JSON.parse(e.data);
                         if (msg.type === 'Exit') {
-                            console.log("Session exited by shell");
                             backToDashboard();
                         }
                     } catch(err) { console.error("Parse signal error", err); }

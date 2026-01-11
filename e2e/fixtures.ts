@@ -56,7 +56,13 @@ export const test = base.extend<{}, WorkerFixtures>({
     }
   }, { scope: 'worker', auto: true }],
 
-  baseURL: async ({ server }, use) => {
-    await use(server.url);
+  baseURL: async ({ server }, use, testInfo) => {
+    let url = server.url;
+    if (testInfo.project.name === 'DOM-Fallback') {
+      url += '?renderer=dom';
+    } else if (testInfo.project.name === 'WebGL') {
+      url += '?renderer=webgl';
+    }
+    await use(url);
   },
 });
