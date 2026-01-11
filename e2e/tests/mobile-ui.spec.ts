@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
-test.describe('Mobile UI & Keyboard Overlay', () => {
+test.describe('Mobile UI', () => {
   const SESSION_NAME = `mobile-test-${Date.now()}`;
 
   test.beforeEach(async ({ page }) => {
@@ -25,6 +25,9 @@ test.describe('Mobile UI & Keyboard Overlay', () => {
   });
 
   test('should handle sticky Ctrl + c combination', async ({ page }) => {
+    // Ensure WebSocket is ready
+    await page.waitForFunction(() => (window as any).ws && (window as any).ws.readyState === 1);
+
     // 1. Click Ctrl button using dispatchEvent to ensure onclick is triggered
     const ctrlBtn = page.locator('#btn-ctrl-key');
     await ctrlBtn.dispatchEvent('click');

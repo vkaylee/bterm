@@ -15,8 +15,9 @@
   - **Terminal View**: Xterm.js container with a mobile-optimized 2-row virtual keyboard.
   - **Mobile Logic**: Uses `VisualViewport API` for layout adjustment and "Sticky Modifiers" for complex key combinations.
 
-## Testing
-  - **`session-management.spec.ts`**: CRUD operations on sessions.
-  - **`terminal-interaction.spec.ts`**: Data flow, shell execution, and **auto-exit verification**.
-  - **`mobile-ui.spec.ts`**: Responsive design, visual viewport handling, and **input accessibility**.
+## Testing & Quality
+- `tests/port_integration.rs`: Integration tests for dynamic port binding and env overrides.
+- `e2e/playwright.config.ts`: Configuration for Playwright E2E tests with parallel worker support.
+- `e2e/fixtures.ts`: Worker-scoped fixtures for spawning isolated backend instances during E2E tests.
+- `e2e/tests/`: Comprehensive E2E test suite covering Session Management, Terminal Interaction, Assets, and Mobile UI.
 

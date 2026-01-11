@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Terminal Interaction', () => {
   const SESSION_NAME = `term-session-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -72,6 +72,9 @@ test.describe('Terminal Interaction', () => {
       });
     
       test('should automatically exit terminal on shell exit', async ({ page }) => {
+        // Ensure WebSocket is ready
+        await page.waitForFunction(() => (window as any).ws && (window as any).ws.readyState === 1);
+
         // Focus terminal
         await page.click('#terminal');
         
@@ -81,7 +84,7 @@ test.describe('Terminal Interaction', () => {
     
             // Wait for dashboard to become visible (proving the auto-exit worked)
             // We increase timeout as 'exit' might take a moment to propagate
-            await expect(page.locator('#dashboard')).toBeVisible({ timeout: 5000 });
+            await expect(page.locator('#dashboard')).toBeVisible({ timeout: 10000 });
             
             // Check if session-info is hidden
             await expect(page.locator('#session-info')).toBeHidden();

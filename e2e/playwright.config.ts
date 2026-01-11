@@ -27,8 +27,8 @@ export default defineConfig({
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    /* Base URL is now managed via worker fixtures */
+    // baseURL: 'http://localhost:3000',
 
     /* Collect traces upon failing the first time. */
     trace: 'on-first-retry',
@@ -73,11 +73,11 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
+  /* webServer: {
     command: 'cargo run',
     url: 'http://localhost:3000',
     timeout: 60 * 1000, // 60 seconds
     reuseExistingServer: !process.env.CI,
     cwd: path.resolve(__dirname, '..'), // Run cargo run from the project root
-  },
+  }, */
 });

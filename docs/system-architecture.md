@@ -45,3 +45,14 @@
 - Ứng dụng được đóng gói dưới dạng **Single Binary**.
 - Frontend (HTML/JS/CSS) và toàn bộ tài nguyên (Fonts, Libraries) được nhúng trực tiếp vào binary Rust bằng `rust-embed`.
 - Dự án không yêu cầu kết nối Internet khi khởi chạy (Zero external dependencies at runtime).
+
+## Testing Architecture
+
+BTerminal employs a strictly isolated testing strategy to ensure reliability and parallelism:
+
+1.  **Unit & Integration Tests**: Backend logic (PTY management, session monitoring) is tested using standard `cargo test`. Integration tests verify the dynamic port binding logic by simulating collisions and environment overrides.
+2.  **E2E Isolation (Worker-Scoped)**: 
+    - Playwright is configured to run tests in parallel.
+    - Each test worker utilizes a custom fixture (`e2e/fixtures.ts`) that spawns a dedicated BTerminal backend instance.
+    - Servers are bound to a random port (`PORT=0`) provided by the OS, preventing conflict between parallel workers.
+    - This architecture ensures that each test suite starts with a fresh `SessionRegistry`, preventing state leakage and making tests deterministic.
