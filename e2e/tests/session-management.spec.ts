@@ -14,18 +14,15 @@ test.describe('Session Management', () => {
     ]);
     expect(response.ok()).toBeTruthy(); // Ensure API call was successful
 
-    // Wait for the new session card to appear in the DOM
-    await page.waitForFunction(
-      (sessionName) => {
-        const list = document.getElementById('session-list');
-        // Check innerHTML for presence of session name
-        return list && list.innerHTML.includes(sessionName);
-      },
-      SESSION_NAME,
-      { timeout: 30000 } // Increased timeout
-    );
+    // Verify auto-join: Terminal should be visible and ID should match
+    await expect(page.locator('#terminal-view')).toBeVisible();
+    await expect(page.locator('#current-session-id')).toHaveText(SESSION_NAME);
 
-    // Wait for the session list to update and specifically locate the card
+    // Go back to dashboard to verify deletion flow
+    await page.click('button[title="Exit Session"]');
+    await expect(page.locator('#dashboard')).toBeVisible();
+
+    // Wait for the new session card to appear in the DOM
     const sessionCardLocator = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
     await expect(sessionCardLocator).toBeVisible();
     await expect(sessionCardLocator).toHaveCount(1); // Ensure it's unique after creation

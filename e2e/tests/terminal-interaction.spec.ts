@@ -13,22 +13,6 @@ test.describe('Terminal Interaction', () => {
     ]);
     expect(response.ok()).toBeTruthy(); // Ensure API call was successful
     
-    // Wait for the new session card to appear in the DOM
-    await page.waitForFunction(
-      (sessionName) => {
-        const list = document.getElementById('session-list');
-        // Check innerHTML for presence of session name
-        return list && list.innerHTML.includes(sessionName);
-      },
-      SESSION_NAME,
-      { timeout: 30000 } // Increased timeout
-    );
-    
-    // Wait for the session card to appear and then click it to join
-    const sessionCardToJoin = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
-    await expect(sessionCardToJoin).toBeVisible();
-    await sessionCardToJoin.click();
-    
     await page.waitForSelector('#terminal'); // Wait for terminal to be visible
   });
 

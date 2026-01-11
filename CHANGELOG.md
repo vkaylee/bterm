@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **UI:** Tự động kết nối (Auto-join) vào session ngay sau khi tạo thành công, loại bỏ bước trung gian.
 - **UI:** Thiết kế lại Header chuyên nghiệp tích hợp thông tin Session ID, trạng thái kết nối (Pulse indicator) và logo mới.
 - **UI:** Tái cấu trúc Dashboard theo hướng "Nội dung trước" (Content-first): đưa danh sách Active Sessions lên đầu và phần tạo mới xuống cuối.
 - **UI:** Thêm bộ đếm Session hoạt động và giao diện "Empty State" sinh động khi không có session nào.

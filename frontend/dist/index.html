@@ -248,7 +248,8 @@
                 });
                 if (res.ok) {
                     input.value = '';
-                    fetchSessions();
+                    // Automatically join the newly created session
+                    joinSession(id);
                 } else {
                     alert('Error: Session ID might already exist.');
                 }

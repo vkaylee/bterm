@@ -11,10 +11,7 @@ test.describe('Mobile UI & Keyboard Overlay', () => {
     await page.fill('#new-session-name', SESSION_NAME);
     await page.click('button:has-text("Create")');
     
-    const sessionCard = page.locator(`#session-list div.group:has-text("${SESSION_NAME}")`);
-    await expect(sessionCard).toBeVisible();
-    await sessionCard.click();
-    
+    // Auto-join should have happened
     await page.waitForSelector('#terminal-view');
   });
 
