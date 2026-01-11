@@ -37,7 +37,7 @@
 
 ## Tối ưu hóa cho Mobile
 Để đảm bảo trải nghiệm tốt trên thiết bị di động, BTerminal thực hiện các kỹ thuật sau:
-- **Viewport Management:** Tự động điều chỉnh kích thước PTY khi bàn phím ảo xuất hiện/biến mất thông qua `VisualViewport API`. Thay vì chỉ dùng `ResizeObserver`, ứng dụng lắng nghe sự kiện `resize` của viewport thực tế để đẩy thanh phím ảo lên trên bàn phím hệ thống bằng `translateY`.
+- **Viewport Management:** Tự động điều chỉnh kích thước PTY khi bàn phím ảo xuất hiện/biến mất thông qua `VisualViewport API`. Thay vì chỉ dùng `ResizeObserver`, ứng dụng lắng nghe sự kiện `resize` của viewport thực tế để điều chỉnh trực tiếp chiều cao của container ứng dụng (`#app`) theo `viewport.height`. Cách tiếp cận này đảm bảo Xterm.js luôn nhận biết chính xác vùng hiển thị thực tế, tự động cuộn con trỏ vào view và đẩy thanh phím ảo lên trên bàn phím hệ thống một cách tự nhiên theo luồng layout của trình duyệt.
 - **Sticky Modifiers:** Giải quyết vấn đề gõ tổ hợp phím trên mobile. Khi nhấn Ctrl/Alt trên màn hình, ứng dụng sẽ chuyển sang trạng thái "active" và đợi phím gõ tiếp theo từ bàn phím hệ thống (vd: nhấn Ctrl rồi gõ 'c' sẽ gửi mã byte `\x03`).
 - **Input Focus Preservation:** Sử dụng `event.preventDefault()` trên sự kiện `onmousedown` của các nút ảo để ngăn trình duyệt chuyển focus khỏi terminal, giúp bàn phím hệ thống luôn mở khi người dùng thao tác với phím bổ trợ.
 - **Render Refresh:** Ép buộc Xterm.js thực hiện render cycle (`term.refresh()`) và cuộn xuống cuối (`term.scrollToBottom()`) khi nhận dữ liệu mới để tránh lỗi màn hình đen trên một số trình duyệt di động.

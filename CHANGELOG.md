@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Visual Viewport Scaling**: The mobile UI now dynamically adjusts the application height based on the `visualViewport` height. This ensures the terminal remains fully visible when the software keyboard appears and prevents overlapping with UI elements.
+- **Auto-Scroll to Cursor**: The terminal now automatically scrolls to the bottom when the visual viewport is resized, keeping the command prompt in view.
+- **Enhanced Mobile E2E Suite**: Added test cases to verify application scaling and visual viewport response.
+
+### Changed
+- **Improved E2E Isolation**: Fixed a data leakage issue in `session-management.spec.ts` where sessions were not properly cleaned up between tests, ensuring more reliable parallel execution.
+- **Robust Mobile Layout**: Replaced CSS transforms with dynamic container height adjustments for better cross-browser compatibility on mobile.
+
+### Added
 - **Dynamic Port Selection**: The server now checks the `PORT` environment variable, defaults to `3000`, and automatically falls back to an available random port if the preferred ports are occupied.
 - **Port Integration Tests**: New test suite in `tests/port_integration.rs` to verify binding logic and environment variable overrides.
 - **Dynamic E2E Isolation**: Playwright now uses worker-scoped fixtures to spawn independent backend instances on random ports, ensuring zero state leakage during parallel testing.

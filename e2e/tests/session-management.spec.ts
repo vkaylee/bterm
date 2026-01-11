@@ -60,6 +60,12 @@ test.describe('Session Management', () => {
     // Verify auto-join
     await expect(page.locator('#terminal-view')).toBeVisible();
     await expect(page.locator('#current-session-id')).toHaveText(ENTER_SESSION);
+
+    // Cleanup: delete the session
+    await page.click('button[title="Exit Session"]');
+    page.on('dialog', dialog => dialog.accept());
+    await page.click('button[onclick*="removeSession"]');
+    await expect(page.locator(`text=${ENTER_SESSION}`)).toBeHidden();
   });
 
   test('should hide active sessions section when no sessions exist', async ({ page }) => {

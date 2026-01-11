@@ -173,8 +173,12 @@
             const controlBar = document.getElementById('control-bar');
             const terminalView = document.getElementById('terminal-view');
             const dashboard = document.getElementById('dashboard');
+            const app = document.getElementById('app');
             
-            if (!viewport) return;
+            if (!viewport || !app) return;
+
+            // Luôn cập nhật chiều cao app theo viewport thực tế (giúp tránh bị che bởi keyboard/toolbars)
+            app.style.height = `${viewport.height}px`;
 
             if (terminalView.style.display === 'flex' && controlBar) {
                 // Tính toán khoảng cách bị che khuất bởi bàn phím
@@ -185,16 +189,15 @@
 
                 if (isKeyboardVisible) {
                     controlBar.style.display = 'flex';
-                    controlBar.style.transform = `translateY(-${offset}px)`;
                 } else {
                     controlBar.style.display = 'none';
-                    controlBar.style.transform = 'none';
                 }
-
-                // Fit lại terminal
+                
+                // Đảm bảo terminal được fit lại và cuộn tới cuối
                 if (term && fitAddon) {
                     try { 
                         fitAddon.fit(); 
+                        term.scrollToBottom();
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
                         }

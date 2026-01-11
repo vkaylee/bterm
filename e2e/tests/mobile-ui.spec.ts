@@ -55,6 +55,43 @@ test.describe('Mobile UI', () => {
     await expect(controlBar).toBeHidden();
   });
 
+  test('should adjust #app height when visualViewport height changes', async ({ page }) => {
+    const initialHeight = await page.evaluate(() => window.innerHeight);
+    const app = page.locator('#app');
+
+    // Simulate keyboard opening (reducing viewport height)
+    const keyboardHeight = 300;
+    await page.evaluate((kHeight) => {
+      Object.defineProperty(window, 'visualViewport', {
+        value: {
+          height: window.innerHeight - kHeight,
+          offsetTop: 0,
+          addEventListener: () => {},
+        },
+        configurable: true
+      });
+      (window as any).updateVisualViewport();
+    }, keyboardHeight);
+
+    const adjustedHeight = await app.evaluate((el) => parseFloat(el.style.height));
+    expect(adjustedHeight).toBe(initialHeight - keyboardHeight);
+
+    // Simulate keyboard closing
+    await page.evaluate(() => {
+      Object.defineProperty(window, 'visualViewport', {
+        value: {
+          height: window.innerHeight,
+          offsetTop: 0,
+        },
+        configurable: true
+      });
+      (window as any).updateVisualViewport();
+    });
+
+    const finalHeight = await app.evaluate((el) => parseFloat(el.style.height));
+    expect(finalHeight).toBe(initialHeight);
+  });
+
   test('should handle sticky Ctrl + c combination when visible', async ({ page }) => {
     // 0. Force keyboard visible to interact with buttons
     await page.evaluate(() => {
