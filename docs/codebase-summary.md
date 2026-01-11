@@ -10,8 +10,9 @@
 ## Frontend (Single-page Application)
 - `frontend/dist/index.html`: Main UI built with Tailwind CSS and Xterm.js.
   - **Header**: Active session info, connection pulse, and system status.
-  - **Dashboard**: Content-first list of active sessions with a "Start New Instance" section at the bottom.
+  - **Dashboard**: Content-first list of active sessions with a "Start New Instance" section. The active sessions list is automatically hidden when empty.
   - **Auto-Join**: Successful session creation immediately triggers the terminal view for seamless UX.
+  - **Keyboard UX**: Supports "Enter" key for rapid session creation and mobile-optimized input positioning.
   - **Terminal View**: Xterm.js container with a mobile-optimized 2-row virtual keyboard.
   - **Mobile Logic**: Uses `VisualViewport API` for layout adjustment and "Sticky Modifiers" for complex key combinations.
 
