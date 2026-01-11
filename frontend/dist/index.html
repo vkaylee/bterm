@@ -107,6 +107,41 @@
             }
         });
 
+        // Xử lý VisualViewport để đẩy các phím ảo lên khi bàn phím mobile xuất hiện
+        function updateVisualViewport() {
+            const viewport = window.visualViewport;
+            const controlBar = document.getElementById('control-bar');
+            const terminalView = document.getElementById('terminal-view');
+            
+            if (!viewport || !controlBar || terminalView.style.display !== 'flex') return;
+
+            // Tính toán khoảng cách bị che khuất bởi bàn phím
+            // window.innerHeight là chiều cao layout, viewport.height là chiều cao thực tế nhìn thấy
+            const offset = window.innerHeight - viewport.height - viewport.offsetTop;
+            
+            // Đẩy thanh điều khiển lên trên bàn phím
+            if (offset > 0) {
+                controlBar.style.transform = `translateY(-${offset}px)`;
+            } else {
+                controlBar.style.transform = 'none';
+            }
+
+            // Fit lại terminal để không bị lấp mất dòng cuối
+            if (term && fitAddon) {
+                try { 
+                    fitAddon.fit(); 
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                    }
+                } catch(e) {}
+            }
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateVisualViewport);
+            window.visualViewport.addEventListener('scroll', updateVisualViewport);
+        }
+
         async function fetchSessions() {
             try {
                 const res = await fetch('/api/sessions');
@@ -241,6 +276,9 @@
 
             resizeObserver.observe(view);
             term.focus();
+            
+            // Cập nhật vị trí ngay lập tức cho mobile
+            if (window.visualViewport) updateVisualViewport();
         }
 
         function sendSpecialKey(key) {
@@ -267,6 +305,7 @@
             document.getElementById('terminal-view').style.display = 'none';
             document.getElementById('session-info').classList.add('hidden');
             document.getElementById('control-bar').style.display = 'none';
+            document.getElementById('control-bar').style.transform = 'none';
             fetchSessions();
         }
 
