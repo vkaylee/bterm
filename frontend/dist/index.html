@@ -224,6 +224,8 @@
 
                 if (sessions.length === 0) {
                     section.classList.add('hidden');
+                    // Auto-focus the input if there are no sessions
+                    document.getElementById('new-session-name').focus();
                     return;
                 }
 

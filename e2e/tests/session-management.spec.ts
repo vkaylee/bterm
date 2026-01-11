@@ -69,6 +69,9 @@ test.describe('Session Management', () => {
     // Initially, there should be no sessions in the isolated backend
     await expect(page.locator('#active-sessions-section')).toBeHidden();
     
+    // Verify auto-focus
+    await expect(page.locator('#new-session-name')).toBeFocused();
+    
     // Create one
     await page.fill('#new-session-name', 'temp-session');
     await page.click('button:has-text("Create Session")');
