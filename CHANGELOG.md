@@ -20,6 +20,13 @@ All notable changes to this project will be documented in this file.
 - **Session History Test**: Implemented verification for automatic state recovery on WebSocket reconnection.
 - **Enhanced Coverage**: Achieved 94.12% line coverage across the Rust backend, ensuring all critical business logic and error paths are verified.
 
+### [Unreleased]
+- **Real-time Synchronization**: Implemented Server-Sent Events (SSE) at `/api/events` to propagate session lifecycle events (created/deleted) to all active dashboards.
+- **Automatic Exit Propagation**: Refactored `monitor_session` to broadcast a `SessionDeleted` event when a shell process exits, ensuring all devices are instantly updated.
+- **Improved State Management**: `SessionRegistry` now holds a global broadcast sender for consistent event emission across the application.
+- **Sync Integration Tests**: Added `tests/sse_integration.rs` and expanded E2E suite to cover multi-device state consistency.
+- **Code Health**: Resolved all Clippy warnings and compiler noise related to custom CFG flags.
+
 ### Changed
 - Updated `src/main.rs` to use `tokio::net::TcpListener` with a fallback loop instead of a hardcoded address.
 - Refactored E2E tests to use a custom `test` fixture with dynamic `baseURL` instead of a global `webServer`.
