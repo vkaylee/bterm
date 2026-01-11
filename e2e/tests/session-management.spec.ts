@@ -44,4 +44,18 @@ test.describe('Session Management', () => {
     await expect(sessionCardLocator).not.toBeVisible();
     await expect(sessionCardLocator).toHaveCount(0);
   });
+
+  test('should create a session by pressing Enter key', async ({ page }) => {
+    const ENTER_SESSION = `enter-session-${Date.now()}`;
+    await page.goto('/');
+
+    await page.fill('#new-session-name', ENTER_SESSION);
+    
+    // Press Enter and wait for the terminal view to appear
+    await page.press('#new-session-name', 'Enter');
+
+    // Verify auto-join
+    await expect(page.locator('#terminal-view')).toBeVisible();
+    await expect(page.locator('#current-session-id')).toHaveText(ENTER_SESSION);
+  });
 });
