@@ -35,6 +35,28 @@
    - Endpoint `/api/events` (Server-Sent Events) lắng nghe channel này và đẩy thông báo tới toàn bộ Dashboard đang mở.
    - Browser tự động cập nhật danh sách session hoặc hiển thị thông báo nếu session hiện tại bị xóa, đảm bảo tính nhất quán dữ liệu giữa nhiều thiết bị.
 
+## Frontend Rendering Strategy
+
+BTerminal sử dụng cơ chế render 3 tầng (3-Tier Fallback) để đảm bảo cân bằng giữa hiệu suất và tính tương thích trên mọi thiết bị:
+
+1.  **Tier 1: WebGL Renderer (`@xterm/addon-webgl`)**
+    - **Ưu tiên:** Cao nhất.
+    - **Cơ chế:** Sử dụng WebGL2 để render ký tự dưới dạng texture trên GPU.
+    - **Lợi ích:** Đạt 60fps ổn định ngay cả khi output dồn dập (như lệnh `cat` file lớn). Không gây load cho Main Thread.
+2.  **Tier 2: Canvas Renderer (`@xterm/addon-canvas`)**
+    - **Ưu tiên:** Thứ hai (Fallback khi không có WebGL).
+    - **Cơ chế:** Sử dụng Canvas 2D Context. Nhanh hơn DOM nhưng chậm hơn WebGL.
+    - **Lợi ích:** Ổn định cao, hỗ trợ rộng rãi hơn WebGL nhưng vẫn tránh được layout thrashing của DOM.
+3.  **Tier 3: DOM Renderer (Core)**
+    - **Ưu tiên:** Cuối cùng.
+    - **Cơ chế:** Render từng dòng terminal thành các thẻ `<div>` trong DOM.
+    - **Lợi ích:** Tương thích tuyệt đối (chạy được trên mọi trình duyệt hỗ trợ JS cơ bản), debugging dễ dàng, hỗ trợ tốt nhất cho Screen Readers.
+
+**Cơ chế chuyển đổi (Failover):**
+- Khi khởi tạo, ứng dụng thực hiện **Feature Detection** (kiểm tra `canvas.getContext('webgl2')`).
+- Nếu WebGL fail hoặc mất context (context loss) giữa chừng, hệ thống tự động hủy WebGL addon và chuyển sang Canvas.
+- Nếu Canvas fail (ví dụ trên một số trình duyệt mobile cũ hoặc restricted environment), hệ thống fallback về DOM.
+
 ## Tối ưu hóa cho Mobile
 Để đảm bảo trải nghiệm tốt trên thiết bị di động, BTerminal thực hiện các kỹ thuật sau:
 - **Viewport Management:** Tự động điều chỉnh kích thước PTY khi bàn phím ảo xuất hiện/biến mất thông qua `VisualViewport API`. Thay vì chỉ dùng `ResizeObserver`, ứng dụng lắng nghe sự kiện `resize` của viewport thực tế để điều chỉnh trực tiếp chiều cao của container ứng dụng (`#app`) theo `viewport.height`. Cách tiếp cận này đảm bảo Xterm.js luôn nhận biết chính xác vùng hiển thị thực tế, tự động cuộn con trỏ vào view và đẩy thanh phím ảo lên trên bàn phím hệ thống một cách tự nhiên theo luồng layout của trình duyệt.

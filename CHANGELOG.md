@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **3-Tier Renderer Fallback**: Implemented a robust rendering strategy that prioritizes WebGL (via `@xterm/addon-webgl`) for maximum performance, automatically falls back to Canvas (`@xterm/addon-canvas`) if WebGL fails, and finally to the DOM renderer for universal compatibility.
+- **Robust Feature Detection**: Added proactive context checks (`webgl2`, `2d`) to prevent silent failures and race conditions during renderer initialization.
+- **Renderer E2E Suite**: Added `e2e/tests/renderer-fallback.spec.ts` to verify automatic failover logic across all three rendering tiers.
+
+### Changed
+- **Dependency Upgrade**: Migrated from the deprecated `xterm` package to the modern `@xterm/xterm` (v5.5.0) and its official addons.
 - **Visual Viewport Scaling**: The mobile UI now dynamically adjusts the application height based on the `visualViewport` height. This ensures the terminal remains fully visible when the software keyboard appears and prevents overlapping with UI elements.
 - **Auto-Scroll to Cursor**: The terminal now automatically scrolls to the bottom when the visual viewport is resized, keeping the command prompt in view.
 - **Enhanced Mobile E2E Suite**: Added test cases to verify application scaling, visual viewport response, and performance-optimized listeners.
