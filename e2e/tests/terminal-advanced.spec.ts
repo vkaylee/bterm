@@ -168,21 +168,27 @@ test.describe('Advanced Terminal Features', () => {
   });
 
   test('should have scrollback buffer', async ({ page }) => {
+    // Initialize capture BEFORE sending the command
+    await page.evaluate(() => {
+        (window as any).terminalOutput = '';
+        if (!window.term) return;
+        const originalWrite = window.term.write.bind(window.term);
+        window.term.write = (data: any) => {
+            let decoded = (typeof data === 'string') ? data : new TextDecoder().decode(data);
+            (window as any).terminalOutput = ((window as any).terminalOutput || '') + decoded;
+            originalWrite(data);
+        };
+    });
+
     // Generate many lines
     await page.keyboard.type('for i in {1..200}; do echo "LINE $i"; done');
     await page.keyboard.press('Enter');
 
     // Wait for the last line to appear
-    await page.evaluate(() => {
-        (window as any).terminalOutput = '';
-        const originalWrite = window.term.write.bind(window.term);
-        window.term.write = (data: any) => {
-            let decoded = (typeof data === 'string') ? data : new TextDecoder().decode(data);
-            (window as any).terminalOutput += decoded;
-            originalWrite(data);
-        };
-    });
-    await page.waitForFunction(() => (window as any).terminalOutput.includes('LINE 200'), { timeout: 10000 });
+    await page.waitForFunction(() => {
+        const out = (window as any).terminalOutput;
+        return out && out.includes('LINE 200');
+    }, { timeout: 15000 });
 
     // Check xterm scroll position or buffer
     const scrollResult = await page.evaluate(() => {

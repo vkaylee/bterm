@@ -91,16 +91,16 @@ test.describe('Mobile UI', () => {
     expect(finalHeight).toBe(initialHeight);
   });
 
-  test('should enable screenReaderMode and set correct textarea attributes for IME support', async ({ page }) => {
-    // 1. Check screenReaderMode option in xterm.js
+  test('should disable screenReaderMode and set correct textarea attributes for IME support', async ({ page }) => {
+    // 1. Check screenReaderMode option in xterm.js (Should be false now)
     const screenReaderMode = await page.evaluate(() => (window as any).term.options.screenReaderMode);
-    expect(screenReaderMode).toBe(true);
+    expect(screenReaderMode).toBe(false);
 
     // 2. Check textarea attributes (crucial for mobile Vietnamese Telex/IME)
     const textarea = page.locator('.xterm-helper-textarea');
-    await expect(textarea).toHaveAttribute('autocorrect', 'on');
+    await expect(textarea).toHaveAttribute('autocorrect', 'off');
     await expect(textarea).toHaveAttribute('autocapitalize', 'none');
-    await expect(textarea).toHaveAttribute('spellcheck', 'true');
+    await expect(textarea).toHaveAttribute('spellcheck', 'false');
     await expect(textarea).toHaveAttribute('inputmode', 'text');
   });
 

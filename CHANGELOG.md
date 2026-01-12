@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - **PTY Environment Testing**: Enhanced `src/pty_manager.rs` tests to verify `TERM`, `COLORTERM`, and `LANG` variables are correctly set in the shell environment.
 
 ### Fixed
+- **Mobile Telex Duplication**: Resolved a critical issue where typing Vietnamese Telex on mobile (e.g., "chafo") resulted in duplicated characters ("chachàào"). This was fixed by disabling `screenReaderMode` and optimizing hidden textarea attributes (`autocorrect="off"`, `spellcheck="false"`) to prevent browser/keyboard interference during IME composition.
 - **E2E Parallelism Fix**: Resolved a race condition in `mobile-ui.spec.ts` by ensuring each worker uses a unique session ID, preventing cross-test interference during high-concurrency execution.
 - **Locale-Agnostic PTY Tests**: Refactored PTY environment variable tests to be agnostic of the host's locale (e.g., handling `C.UTF-8` vs `en_US.UTF-8`), fixing failures in diverse environments.
 - **E2E Race Conditions**: Improved synchronization in advanced terminal tests by ensuring output capture is initialized before command execution, resolving intermittent timing failures.

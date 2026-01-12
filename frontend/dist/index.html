@@ -333,7 +333,7 @@
                     selectionBackground: 'rgba(255, 255, 255, 0.3)'
                 },
                 allowProposedApi: true,
-                screenReaderMode: isMobile,
+                screenReaderMode: false,
                 letterSpacing: 0.5,
                 lineHeight: 1.2,
                 cursorStyle: 'block'
@@ -400,10 +400,10 @@
             if (isMobile) {
                 const textarea = container.querySelector('.xterm-helper-textarea');
                 if (textarea) {
-                    // Cho phép keyboard mobile hiển thị gợi ý/Telex bằng cách bật autocorrect
-                    textarea.setAttribute('autocorrect', 'on');
+                    // Disable autocorrect and spellcheck to prevent double-input in Telex
+                    textarea.setAttribute('autocorrect', 'off');
                     textarea.setAttribute('autocapitalize', 'none');
-                    textarea.setAttribute('spellcheck', 'true');
+                    textarea.setAttribute('spellcheck', 'false');
                     textarea.setAttribute('inputmode', 'text');
                 }
             }
