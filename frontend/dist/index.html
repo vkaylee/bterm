@@ -252,6 +252,10 @@
         async function fetchSessions() {
             try {
                 const res = await fetch('/api/sessions');
+                if (res.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
                 const sessions = await res.json();
                 const section = document.getElementById('active-sessions-section');
                 const list = document.getElementById('session-list');

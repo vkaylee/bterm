@@ -5,8 +5,8 @@ test.describe('Terminal Layout', () => {
         await page.goto('/');
         // Create/Join a session
         await page.fill('#new-session-name', 'layout-test');
-        await page.click('button:has-text("Create")');
-        await page.waitForSelector('.xterm-screen');
+        await page.click('button:has-text("Create Session")');
+        await page.waitForSelector('.xterm-screen', { state: 'visible', timeout: 15000 });
     });
 
     test('should fill the available vertical space below header', async ({ page }) => {

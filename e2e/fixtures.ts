@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, request } from '@playwright/test';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 
@@ -16,10 +16,14 @@ export const test = base.extend<{}, WorkerFixtures>({
     console.log('Starting worker backend server...');
     const projectRoot = path.resolve(__dirname, '..');
     
-    // Start backend with PORT=0 (auto-assign)
+    // Start backend with PORT=0 (auto-assign) and in-memory DB for isolation
     const serverProcess = spawn('cargo', ['run'], {
       cwd: projectRoot,
-      env: { ...process.env, PORT: '0' },
+      env: { 
+        ...process.env, 
+        PORT: '0',
+        DATABASE_URL: 'sqlite::memory:' 
+      },
       stdio: ['ignore', 'pipe', 'inherit'],
     });
 
@@ -66,5 +70,27 @@ export const test = base.extend<{}, WorkerFixtures>({
       url += '?renderer=webgl';
     }
     await use(url);
+  },
+
+  // Automatically login for each context
+  context: async ({ context, server }, use) => {
+    // Perform login via API
+    const apiContext = await request.newContext({ baseURL: server.url });
+    const loginResponse = await apiContext.post('/api/auth/login', {
+      data: {
+        username: 'admin',
+        password: 'admin'
+      }
+    });
+
+    if (!loginResponse.ok()) {
+      throw new Error(`Auto-login failed: ${loginResponse.status()} ${loginResponse.statusText()}`);
+    }
+
+    // Transfer cookies to the context
+    const cookies = await apiContext.storageState();
+    await context.addCookies(cookies.cookies);
+    
+    await use(context);
   },
 });
