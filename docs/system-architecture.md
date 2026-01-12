@@ -79,6 +79,7 @@ BTerminal sử dụng cơ chế render 3 tầng (3-Tier Fallback) để đảm b
 - **Input Focus Preservation:** Sử dụng `event.preventDefault()` trên sự kiện `onmousedown` của các nút ảo để ngăn trình duyệt chuyển focus khỏi terminal, giúp bàn phím hệ thống luôn mở khi người dùng thao tác with phím bổ trợ.
 - **Vietnamese IME Support:** Giải quyết vấn đề không thể gõ tiếng Việt (Telex/VNI) trên mobile. Để tránh hiện tượng lặp phím (duplicate characters), ứng dụng tắt `screenReaderMode` của Xterm.js trên mobile và cấu hình các thuộc tính của hidden textarea (`autocorrect="off"`, `spellcheck="false"`, `inputmode="text"`). Cấu hình này ngăn chặn trình duyệt thực hiện các hiệu chỉnh văn bản tự động gây xung đột với quá trình xử lý ký tự (composition) của bàn phím hệ thống.
 - **Render Refresh:** Ép buộc Xterm.js thực hiện render cycle (`term.refresh()`) và cuộn xuống cuối (`term.scrollToBottom()`) khi nhận dữ liệu mới để tránh lỗi màn hình đen trên một số trình duyệt di động.
+- **Mobile Touch Selection:** Hỗ trợ cử chỉ nhấn giữ (Long Press - 500ms) để kích hoạt chế độ chọn văn bản trên thiết bị di động. Do terminal sử dụng Canvas/WebGL không có DOM text node thực, hệ thống sử dụng một lớp "Overlay" ẩn để giả lập vùng chọn, cho phép người dùng bôi đen và copy văn bản tự nhiên như ứng dụng native.
 
 ## Deployment
 - Ứng dụng được đóng gói dưới dạng **Single Binary**.

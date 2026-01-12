@@ -27,5 +27,9 @@ cargo run
 - **Modern Dashboard:** Content-first layout with real-time session monitoring and count.
 - **Pro Header:** Quick access to session IDs, connectivity status, and easy exit.
 - **Mobile Optimized:** 2-row virtual keyboard, Sticky Modifiers (Ctrl/Alt), and visual viewport awareness.
+- **Touch Selection:** Native-like text selection on mobile devices via long-press.
+- **Smart Clipboard:** Context-aware Copy/Paste (Ctrl+C/V) and seamless integration with system clipboard.
+- **High Performance:** Automatic 3-tier rendering engine (WebGL -> Canvas -> DOM) for 60fps performance.
+- **Robust Cleanup:** Process Group (PGID) management ensures no orphaned background processes.
 - **Shared View:** Multiple clients can join the same session.
 - **Zero Dependencies:** All frontend assets are embedded in the binary.
