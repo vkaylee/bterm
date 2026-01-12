@@ -407,6 +407,24 @@
 
             term.open(container);
 
+            // Smart Copy/Paste Handling
+            term.attachCustomKeyEventHandler((ev) => {
+                // Ctrl+C: Copy if selection exists, else send SIGINT
+                if (ev.ctrlKey && ev.type === 'keydown' && (ev.key === 'c' || ev.key === 'C')) {
+                    if (term.hasSelection()) {
+                        return false; // Let browser handle copy
+                    }
+                    return true; // Let xterm handle (send \x03)
+                }
+                
+                // Ctrl+V: Paste
+                if (ev.ctrlKey && ev.type === 'keydown' && (ev.key === 'v' || ev.key === 'V')) {
+                    return false; // Let browser handle paste
+                }
+                
+                return true;
+            });
+
             // Tối ưu hóa cho IME (Vietnamese Telex, v.v.) trên mobile
             if (isMobile) {
                 const textarea = container.querySelector('.xterm-helper-textarea');
