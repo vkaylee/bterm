@@ -36,10 +36,14 @@
     - Thread này sử dụng `libc::getppid()` để theo dõi PID của tiến trình cha.
     - Nếu tiến trình cha biến mất (PID cha đổi thành 1 - init), watcher thread sẽ ngay lập tức thực hiện `Recursive Kill` cho process group con rồi mới kết thúc.
 
-**Cơ chế kỹ thuật:**
-- **PGID Leadership:** Shell được thiết lập làm session leader.
-- **Recursive Kill:** Sử dụng `kill(-PID, SIGKILL)` (dấu trừ chỉ định gửi tới toàn bộ group).
-- **Libraries:** Sử dụng crate `nix` và `libc` để thao tác trực tiếp với Unix signals và PID một cách an toàn.
+## Smart Clipboard (Shortcuts)
+
+BTerminal triển khai logic xử lý clipboard thông minh để thu hẹp khoảng cách giữa trình duyệt và terminal truyền thống:
+
+-   **Context-Aware Ctrl+C:**
+    -   **Chế độ Copy:** Nếu người dùng bôi đen (select) văn bản, phím `Ctrl+C` sẽ kích hoạt lệnh Copy của trình duyệt.
+    -   **Chế độ Interrupt:** Nếu không có văn bản nào được chọn, `Ctrl+C` sẽ gửi mã byte `\x03` (SIGINT) tới backend để dừng tiến trình đang chạy.
+-   **Native Paste (Ctrl+V):** Cho phép dán văn bản trực tiếp từ clipboard hệ thống vào terminal thông qua phím tắt tiêu chuẩn mà không cần menu chuột phải.
 
 ## Frontend Rendering Strategy
 

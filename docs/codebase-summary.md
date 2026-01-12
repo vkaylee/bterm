@@ -18,10 +18,12 @@
   - **Sticky Modifiers:** Hỗ trợ phím chức năng ảo (Ctrl, Alt) trên mobile.
   - **Real-time Sync:** Tự động cập nhật danh sách session qua SSE.
   - **Single Binary:** Tích hợp sâu với backend qua `rust-embed`.
+  - **Smart Clipboard:** Hỗ trợ Ctrl+C (Copy khi có selection, SIGINT khi không có) và Ctrl+V (Paste) thông minh, giúp trải nghiệm web terminal như ứng dụng native.
 
 ## Testing & Quality
 - **Coverage**: **95.12% line coverage** achieved for the Rust backend.
 - `tests/sse_integration.rs`: New integration tests for SSE event streaming.
+- `e2e/tests/clipboard.spec.ts`: **New** Verification of Smart Ctrl+C/V logic and clipboard permissions.
 - `e2e/tests/sync-management.spec.ts`: Verification of multi-device synchronization.
 - `e2e/tests/shared-resize.spec.ts`: **New** Verification of Max-Dimension logic (Approach C) across multiple browsers.
 - `e2e/tests/vietnamese-ime.spec.ts`: **New** Verification of Vietnamese Telex typing without duplication.

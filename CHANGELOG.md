@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2026-01-12
+
+### Added
+- **Smart Clipboard (Ctrl+C/V)**: Implemented context-aware clipboard shortcuts.
+    - **Ctrl+C**: Automatically copies text to the system clipboard if a selection exists in the terminal. If no text is selected, it correctly sends the `SIGINT` interrupt signal to the backend.
+    - **Ctrl+V**: Enables native browser paste, allowing users to paste text from their clipboard directly into the terminal input.
+- **Clipboard E2E Suite**: Added `e2e/tests/clipboard.spec.ts` to verify the "Smart" logic for Copy, Paste, and Interrupt across different selection states.
+
 ## [0.1.3] - 2026-01-12
 
 ### Added
