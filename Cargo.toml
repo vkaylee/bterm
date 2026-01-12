@@ -20,6 +20,7 @@ hyper-util = "0.1.19"
 tokio-stream = "0.1.18"
 async-stream = "0.3.6"
 reqwest = { version = "0.13.1", features = ["stream"] }
+uuid = { version = "1.19.0", features = ["v4"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }

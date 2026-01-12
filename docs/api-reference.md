@@ -60,7 +60,15 @@ Kết nối vào luồng dữ liệu thời gian thực của một session.
 
 #### Server Messages
 - **Binary**: Dữ liệu thô (raw bytes) từ PTY output hoặc lịch sử buffer.
-- **Text (JSON)**: Thông báo trạng thái (ví dụ: `{"type": "Exit"}`).
+- **Text (JSON)**: Thông báo trạng thái hoặc điều khiển.
+  - **Exit**: Khi session kết thúc.
+    ```json
+    {"type": "Exit"}
+    ```
+  - **SetSize**: Đồng bộ kích thước PTY lớn nhất cho tất cả client.
+    ```json
+    {"type": "SetSize", "data": {"rows": 30, "cols": 100}}
+    ```
 
 ---
 

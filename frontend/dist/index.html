@@ -27,6 +27,14 @@
             will-change: transform;
             backface-visibility: hidden;
             touch-action: pan-y;
+            margin: auto; /* Căn giữa terminal khi buffer nhỏ hơn container */
+            display: block;
+        }
+        #terminal-view {
+            overflow: auto; /* Cho phép scroll khi terminal buffer lớn hơn màn hình */
+            background-color: #000;
+            width: 100%;
+            height: 100%;
         }
         /* Style cho các nút điều khiển trên mobile */
         .btn-ctrl {
@@ -163,13 +171,14 @@
         window.fitAddon = null;
         window.ws = null;
 
+        let isSyncingSize = false;
         const resizeObserver = new ResizeObserver(() => {
-            if (term && fitAddon && document.getElementById('terminal-view').style.display === 'flex') {
+            if (term && fitAddon && !isSyncingSize && document.getElementById('terminal-view').style.display === 'flex') {
                 requestAnimationFrame(() => {
                     try {
-                        fitAddon.fit();
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                        const dims = fitAddon.proposeDimensions();
+                        if (dims && ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: dims.rows, cols: dims.cols } }));
                         }
                     } catch (e) {}
                 });
@@ -214,12 +223,12 @@
                 }
                 
                 // Đảm bảo terminal được fit lại và cuộn tới cuối
-                if (term && fitAddon) {
+                if (term && fitAddon && !isSyncingSize) {
                     try { 
-                        fitAddon.fit(); 
+                        const dims = fitAddon.proposeDimensions();
                         term.scrollToBottom();
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                        if (dims && ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: dims.rows, cols: dims.cols } }));
                         }
                     } catch(e) {}
                 }
@@ -430,17 +439,17 @@
             
             // Đảm bảo terminal chiếm toàn bộ không gian
             const doFit = () => {
-                if (!term || !fitAddon) return;
+                if (!term || !fitAddon || isSyncingSize) return;
                 const container = document.getElementById('terminal');
                 if (!container || !container.offsetParent || container.clientWidth === 0) return;
 
                 try { 
+                    // Thực hiện fit thực tế để khởi tạo kích thước ban đầu phù hợp với viewport
                     fitAddon.fit(); 
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
                     }
                 } catch(e) {
-                    // Nếu fit thất bại (do xterm chưa sẵn sàng viewport), thử lại sau
                     setTimeout(doFit, 100);
                 }
             };
@@ -460,12 +469,59 @@
                         const msg = JSON.parse(e.data);
                         if (msg.type === 'Exit') {
                             backToDashboard();
+                        } else if (msg.type === 'SetSize') {
+                            const { rows, cols } = msg.data;
+                            if (term && (term.rows !== rows || term.cols !== cols)) {
+                                console.log(`Syncing terminal size to ${cols}x${rows}`);
+                                isSyncingSize = true;
+                                term.resize(cols, rows);
+                                
+                                // Cập nhật kích thước vật lý của div terminal để hiện scrollbar nếu cần
+                                const updatePhysicalSize = () => {
+                                    if (term._core && term._core._renderService && term._core._renderService.dimensions.actualCellWidth > 0) {
+                                        const dims = term._core._renderService.dimensions;
+                                        const terminalEl = document.getElementById('terminal');
+                                        terminalEl.style.setProperty('width', `${Math.ceil(cols * dims.actualCellWidth) + 10}px`, 'important');
+                                        terminalEl.style.setProperty('height', `${Math.ceil(rows * dims.actualCellHeight) + 10}px`, 'important');
+                                        terminalEl.style.minWidth = terminalEl.style.width;
+                                        terminalEl.style.minHeight = terminalEl.style.height;
+                                    } else {
+                                        setTimeout(updatePhysicalSize, 50);
+                                    }
+                                };
+                                updatePhysicalSize();
+
+                                setTimeout(() => { isSyncingSize = false; }, 100);
+                            }
                         }
                     } catch(err) { console.error("Parse signal error", err); }
                 } else {
                     term.write(new Uint8Array(e.data)); 
                 }
             };
+
+            // Tự động cuộn theo con trỏ trên mobile khi terminal buffer lớn hơn màn hình
+            if (isMobile) {
+                term.onCursorMove(() => {
+                    const cursorElement = container.querySelector('.xterm-cursor-layer');
+                    if (cursorElement && term._core && term._core._renderService) {
+                        const dims = term._core._renderService.dimensions;
+                        const scrollLeft = term.buffer.active.cursorX * dims.actualCellWidth;
+                        const scrollTop = (term.buffer.active.cursorY + term.buffer.active.viewportY) * dims.actualCellHeight;
+                        
+                        // Nếu con trỏ ra ngoài vùng nhìn thấy, cuộn container
+                        const view = document.getElementById('terminal-view');
+                        const buffer = 50; // Khoảng cách đệm
+                        
+                        if (scrollLeft < view.scrollLeft || scrollLeft > view.scrollLeft + view.clientWidth - buffer) {
+                            view.scrollTo({ left: Math.max(0, scrollLeft - view.clientWidth / 2), behavior: 'smooth' });
+                        }
+                        if (scrollTop < view.scrollTop || scrollTop > view.scrollTop + view.clientHeight - buffer) {
+                            view.scrollTo({ top: Math.max(0, scrollTop - view.clientHeight / 2), behavior: 'smooth' });
+                        }
+                    }
+                });
+            }
             ws.onerror = (err) => { console.error("WS Error", err); };
             ws.onclose = () => { 
                 console.log("Session connection closed");

@@ -59,7 +59,12 @@ BTerminal sử dụng cơ chế render 3 tầng (3-Tier Fallback) để đảm b
 
 ## Tối ưu hóa cho Mobile
 Để đảm bảo trải nghiệm tốt trên thiết bị di động, BTerminal thực hiện các kỹ thuật sau:
-- **Viewport Management:** Tự động điều chỉnh kích thước PTY khi bàn phím ảo xuất hiện/biến mất thông qua `VisualViewport API`. Thay vì chỉ dùng `ResizeObserver`, ứng dụng lắng nghe sự kiện `resize` của viewport thực tế để điều chỉnh trực tiếp chiều cao của container ứng dụng (`#app`) theo `viewport.height`. Cách tiếp cận này đảm bảo Xterm.js luôn nhận biết chính xác vùng hiển thị thực tế, tự động cuộn con trỏ vào view và đẩy thanh phím ảo lên trên bàn phím hệ thống một cách tự nhiên theo luồng layout của trình duyệt.
+- **Viewport Management:** Tự động điều chỉnh kích thước container ứng dụng theo `VisualViewport API`.
+- **Shared PTY Dimensions (Approach C):** Giải quyết vấn đề màn hình lớn bị co lại khi thiết bị nhỏ hơn kết nối vào. 
+    - Server duy trì danh sách kích thước mong muốn của tất cả các client.
+    - PTY luôn được thiết lập theo kích thước **lớn nhất** (MAX rows/cols) từng được yêu cầu bởi nhóm client hiện tại.
+    - Các thiết bị nhỏ hơn sẽ hiển thị terminal buffer lớn thông qua thanh cuộn (`overflow: auto`) thay vì ép PTY phải co lại.
+- **Smart Cursor Follow:** Trên mobile, giao diện tự động smooth-scroll theo vị trí con trỏ khi người dùng nhập văn bản, đảm bảo vùng làm việc luôn hiển thị ngay cả khi buffer lớn hơn màn hình.
 - **Sticky Modifiers:** Giải quyết vấn đề gõ tổ hợp phím trên mobile. Khi nhấn Ctrl/Alt trên màn hình, ứng dụng sẽ chuyển sang trạng thái "active" và đợi phím gõ tiếp theo từ bàn phím hệ thống (vd: nhấn Ctrl rồi gõ 'c' sẽ gửi mã byte `\x03`).
 - **Input Focus Preservation:** Sử dụng `event.preventDefault()` trên sự kiện `onmousedown` của các nút ảo để ngăn trình duyệt chuyển focus khỏi terminal, giúp bàn phím hệ thống luôn mở khi người dùng thao tác with phím bổ trợ.
 - **Vietnamese IME Support:** Giải quyết vấn đề không thể gõ tiếng Việt (Telex/VNI) trên mobile. Để tránh hiện tượng lặp phím (duplicate characters), ứng dụng tắt `screenReaderMode` của Xterm.js trên mobile và cấu hình các thuộc tính của hidden textarea (`autocorrect="off"`, `spellcheck="false"`, `inputmode="text"`). Cấu hình này ngăn chặn trình duyệt thực hiện các hiệu chỉnh văn bản tự động gây xung đột với quá trình xử lý ký tự (composition) của bàn phím hệ thống.

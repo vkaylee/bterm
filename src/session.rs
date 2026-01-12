@@ -15,6 +15,44 @@ pub struct Session {
     pub pty_manager: Arc<PtyManager>,
     pub broadcast_tx: broadcast::Sender<Vec<u8>>,
     pub history: Arc<Mutex<Vec<u8>>>,
+    pub client_sizes: Arc<Mutex<std::collections::HashMap<uuid::Uuid, (u16, u16)>>>,
+}
+
+impl Session {
+    pub fn update_client_size(&self, client_id: uuid::Uuid, rows: u16, cols: u16) {
+        let mut sizes = self.client_sizes.lock().unwrap();
+        sizes.insert(client_id, (rows, cols));
+        self.recalculate_pty_size(&sizes);
+    }
+
+    pub fn remove_client(&self, client_id: uuid::Uuid) {
+        let mut sizes = self.client_sizes.lock().unwrap();
+        if sizes.remove(&client_id).is_some() {
+            self.recalculate_pty_size(&sizes);
+        }
+    }
+
+    fn recalculate_pty_size(&self, sizes: &std::collections::HashMap<uuid::Uuid, (u16, u16)>) {
+        if sizes.is_empty() {
+            return;
+        }
+
+        let mut max_rows = 0;
+        let mut max_cols = 0;
+
+        for (r, c) in sizes.values() {
+            if *r > max_rows { max_rows = *r; }
+            if *c > max_cols { max_cols = *c; }
+        }
+
+        if max_rows > 0 && max_cols > 0 {
+            let _ = self.pty_manager.resize(max_rows, max_cols);
+            
+            // Thông báo kích thước PTY mới cho tất cả các client để đồng bộ UI
+            let msg = format!(r#"{{"type": "SetSize", "data": {{"rows": {}, "cols": {}}}}}"#, max_rows, max_cols);
+            let _ = self.broadcast_tx.send(msg.into_bytes());
+        }
+    }
 }
 
 pub struct SessionRegistry {
@@ -71,12 +109,14 @@ impl SessionRegistry {
         let pty_manager = Arc::new(PtyManager::new());
         let (tx, _) = broadcast::channel(100);
         let history = Arc::new(Mutex::new(Vec::new()));
+        let client_sizes = Arc::new(Mutex::new(std::collections::HashMap::new()));
 
         let session = Session {
             id: id.clone(),
             pty_manager: pty_manager.clone(),
             broadcast_tx: tx.clone(),
             history: history.clone(),
+            client_sizes,
         };
 
         let rx = tx.subscribe();
@@ -137,11 +177,13 @@ mod tests {
 
         // Giả lập session trong registry
         let pty_manager = Arc::new(PtyManager::new());
+        let client_sizes = Arc::new(Mutex::new(std::collections::HashMap::new()));
         let session = Session {
             id: session_id.clone(),
             pty_manager,
             broadcast_tx: tx.clone(),
             history: history.clone(),
+            client_sizes,
         };
         sessions.lock().unwrap().insert(session_id.clone(), session);
 

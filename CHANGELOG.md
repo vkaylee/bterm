@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [0.1.2] - 2026-01-12
 
 ### Added
-- **Vietnamese IME Support**: Enhanced mobile terminal input by enabling `screenReaderMode` and optimizing hidden textarea attributes (`autocorrect`, `spellcheck`, `inputmode`). This allows mobile keyboards (e.g., Telex) to correctly perform character transformations for Vietnamese typing.
+- **Shared PTY Dimensions (Approach C)**: Implemented a robust multi-device terminal resizing strategy. The backend now tracks dimensions of all connected clients and resizes the PTY process to the **MAX(rows)** and **MAX(cols)** of all active sessions. This prevents desktop screens from shrinking when a mobile device joins.
+- **SetSize Protocol**: Introduced a new WebSocket control message `SetSize` to synchronize `xterm.js` buffer dimensions across all clients.
+- **Vietnamese IME Support**: Enhanced mobile terminal input by enabling optimized hidden textarea attributes (`autocorrect="off"`, `spellcheck="false"`). This allows mobile keyboards (e.g., Telex) to correctly perform character transformations for Vietnamese typing without duplication.
+- **Smart Cursor Follow**: Mobile devices now automatically smooth-scroll to keep the terminal cursor in view as the user types.
+- **Resize Synchronization Tests**: Added `e2e/tests/shared-resize.spec.ts` to verify Max-Dimension logic across multiple browsers.
+- **Vietnamese IME Tests**: Added `e2e/tests/vietnamese-ime.spec.ts` to verify real-world Telex typing.
 - **Advanced Terminal Feature Tests**: Added a comprehensive test suite in `e2e/tests/terminal-advanced.spec.ts` to verify critical terminal functionalities.
 - **PTY Resize Verification**: End-to-end tests now confirm that PTY resizing is correctly propagated to the backend shell (verified via `stty size`).
 - **Interrupt Handling (Ctrl+C)**: Verified that special key combinations correctly interrupt running processes in the terminal.

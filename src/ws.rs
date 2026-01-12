@@ -33,6 +33,7 @@ pub async fn ws_handler(
 }
 
 async fn handle_socket(socket: WebSocket, session: Session) {
+    let client_id = uuid::Uuid::new_v4();
     let (mut sender, mut receiver) = socket.split();
 
     // Send history first
@@ -54,6 +55,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
 
     let mut rx = session.broadcast_tx.subscribe();
     let pty = session.pty_manager.clone();
+    let session_clone = session.clone();
 
     // Spawn a task to forward PTY output to WebSocket
     let mut send_task = tokio::spawn(async move {
@@ -63,9 +65,21 @@ async fn handle_socket(socket: WebSocket, session: Session) {
                     if data.is_empty() {
                         break; // PTY ended
                     }
+                    
+                    // Kiểm tra xem đây có phải là tin nhắn điều khiển JSON không (SetSize, v.v.)
+                    if data.starts_with(b"{\"type\":") {
+                        if let Ok(text) = String::from_utf8(data.clone()) {
+                            if let Err(e) = sender.send(Message::Text(text.into())).await {
+                                println!("WS send error (text): {e}");
+                                return;
+                            }
+                            continue;
+                        }
+                    }
+
                     let bin_data: Vec<u8> = data;
                     if let Err(e) = sender.send(Message::Binary(bin_data.into())).await {
-                        println!("WS send error: {e}");
+                        println!("WS send error (binary): {e}");
                         return;
                     }
                 }
@@ -82,6 +96,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
     });
 
     // Handle incoming messages from WebSocket
+    let session_for_recv = session.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let Message::Text(text) = msg
@@ -95,10 +110,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
                         }
                     }
                     ClientMessage::Resize { rows, cols } => {
-                        if let Err(e) = pty.resize(rows, cols) {
-                            #[cfg(not(tarpaulin_include))]
-                            println!("PTY resize error: {e}");
-                        }
+                        session_for_recv.update_client_size(client_id, rows, cols);
                     }
                 }
             }
@@ -110,6 +122,9 @@ async fn handle_socket(socket: WebSocket, session: Session) {
         _ = (&mut send_task) => recv_task.abort(),
         _ = (&mut recv_task) => send_task.abort(),
     };
+
+    // Clean up client size on disconnect
+    session_clone.remove_client(client_id);
 }
 
 #[cfg(test)]
