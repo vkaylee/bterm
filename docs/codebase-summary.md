@@ -24,4 +24,5 @@
 - `tests/sse_integration.rs`: New integration tests for SSE event streaming.
 - `e2e/tests/sync-management.spec.ts`: Verification of multi-device synchronization.
 - `e2e/tests/terminal-layout.spec.ts`: Verification of full-screen layout and resizing.
+- `e2e/tests/terminal-advanced.spec.ts`: **New** Advanced verification for PTY resizing, special keys (Ctrl+C), session persistence, and UTF-8 rendering.
 

@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-01-12
+
+### Added
+- **Advanced Terminal Feature Tests**: Added a comprehensive test suite in `e2e/tests/terminal-advanced.spec.ts` to verify critical terminal functionalities.
+- **PTY Resize Verification**: End-to-end tests now confirm that PTY resizing is correctly propagated to the backend shell (verified via `stty size`).
+- **Interrupt Handling (Ctrl+C)**: Verified that special key combinations correctly interrupt running processes in the terminal.
+- **Session Persistence**: Confirmed that terminal sessions persist across page reloads and can be successfully re-joined with history intact.
+- **Scrollback Buffer Support**: Verified that the terminal maintains and correctly manages scrollback history.
+- **UTF-8 & Unicode Support**: Added tests for complex character rendering, including Emoji, CJK (Chinese, Japanese, Korean), and other multi-byte characters.
+- **Session Isolation**: Verified that multiple simultaneous sessions operate independently without data leakage between instances.
+- **PTY Environment Testing**: Enhanced `src/pty_manager.rs` tests to verify `TERM`, `COLORTERM`, and `LANG` variables are correctly set in the shell environment.
+
+### Fixed
+- **Locale-Agnostic PTY Tests**: Refactored PTY environment variable tests to be agnostic of the host's locale (e.g., handling `C.UTF-8` vs `en_US.UTF-8`), fixing failures in diverse environments.
+- **E2E Race Conditions**: Improved synchronization in advanced terminal tests by ensuring output capture is initialized before command execution, resolving intermittent timing failures.
+- **Robust Session Reconnection**: Fixed a potential error in the reload test where `window.terminalOutput` could be accessed before initialization.
+
 ## [0.1.1] - 2026-01-11
 
 ### Fixed

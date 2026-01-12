@@ -62,4 +62,19 @@ Kết nối vào luồng dữ liệu thời gian thực của một session.
 - **Binary**: Dữ liệu thô (raw bytes) từ PTY output hoặc lịch sử buffer.
 - **Text (JSON)**: Thông báo trạng thái (ví dụ: `{"type": "Exit"}`).
 
+---
+
+## Technical Specifications
+
+### PTY Environment
+Every PTY process is initialized with the following environment variables to ensure consistent behavior across different host systems:
+- `TERM`: `xterm-256color`
+- `COLORTERM`: `truecolor`
+- `LANG`: `en_US.UTF-8` (falls back to `C.UTF-8` if unavailable)
+
+### Character Encoding
+- **Encoding**: UTF-8 (Strict)
+- **Special Keys**: Support for ANSI escape sequences for arrows, functional keys, and modifier combinations (Ctrl, Alt).
+- **Isolation**: Data streams are strictly isolated per session ID.
+
 

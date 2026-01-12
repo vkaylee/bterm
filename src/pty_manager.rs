@@ -24,7 +24,10 @@ impl PtyManager {
             .unwrap();
 
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string());
-        let cmd = CommandBuilder::new(shell);
+        let mut cmd = CommandBuilder::new(shell);
+        cmd.env("TERM", "xterm-256color");
+        cmd.env("COLORTERM", "truecolor");
+        cmd.env("LANG", "en_US.UTF-8");
         let mut child = pair.slave.spawn_command(cmd).unwrap();
 
         thread::spawn(move || {
@@ -144,5 +147,42 @@ mod tests {
         // Test resize
         assert!(pty.resize(24, 80).is_ok());
         assert!(pty.resize(40, 120).is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_pty_env_vars() {
+        let pty = PtyManager::new();
+        let (tx, mut rx) = broadcast::channel(100);
+        pty.start_reader(tx);
+
+        // We use a small delay to let the shell initialize
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Write command to print env vars
+        pty.write(b"echo $TERM $COLORTERM $LANG\n").unwrap();
+
+        let mut output = String::new();
+        let timeout = tokio::time::sleep(Duration::from_secs(2));
+        tokio::pin!(timeout);
+
+        loop {
+            tokio::select! {
+                msg = rx.recv() => {
+                    if let Ok(data) = msg {
+                        output.push_str(&String::from_utf8_lossy(&data));
+                        if output.contains("xterm-256color") && 
+                           output.contains("truecolor") && 
+                           output.contains(".UTF-8") {
+                            return; // Success
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                _ = &mut timeout => {
+                    panic!("Timeout waiting for env vars in output. Got: {}", output);
+                }
+            }
+        }
     }
 }
