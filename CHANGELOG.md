@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-01-13
+
+### Added
+- **Authentication System**: Implemented a secure, self-contained authentication layer using SQLite and Session Cookies.
+    - **Secure Hashing**: Passwords are encrypted using the industry-standard `Argon2id` algorithm.
+    - **Session Management**: Implemented `tower-sessions` with a secure cookie-based state (HttpOnly, SameSite=Strict).
+    - **Protected Routes**: All session management (`/api/sessions`) and terminal access (`/ws/*`) routes are now protected by an authentication middleware.
+    - **Identity API**: Added `/api/auth/login`, `/api/auth/logout`, and `/api/auth/me` endpoints.
+    - **Automatic Admin**: The server automatically creates a default administrator (`admin`/`admin`) on the first run for immediate access.
+    - **Persistence**: User credentials and roles are persisted in a local `bterminal.db` SQLite database.
+- **Login UI**: Added a dedicated, styled login page (`/login.html`) that integrates seamlessly with the backend auth system.
+- **Auth Integration Tests**: Added `tests/auth_integration.rs` to verify the complete login-to-access flow, including session cookie persistence and unauthorized access prevention.
+
 ## [0.1.6] - 2026-01-12
 
 ### Fixed

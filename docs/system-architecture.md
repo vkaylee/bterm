@@ -3,10 +3,10 @@
 ## Thành phần hệ thống
 
 ```ascii
-┌──────────────┐      HTTP (JSON)      ┌──────────────────┐
-│   Browser    │◄─────────────────────▶│   Axum Server    │
-│  (Dashboard) │◄─────────────────────┤ (SessionRegistry)│
-└──────────────┘      SSE Events       └────────┬─────────┘
+┌──────────────┐      HTTP (JSON)      ┌──────────────────┐      ┌──────────────┐
+│   Browser    │◄─────────────────────▶│   Axum Server    │◄────▶│   SQLite     │
+│  (Dashboard) │◄─────────────────────┤ (Auth & Registry)│      │ (bterminal.db)│
+└──────────────┘      SSE Events       └────────┬─────────┘      └──────────────┘
         ▲                                       │
         │ WebSockets (Binary)                   │ Spawn
         ▼                                       ▼
@@ -17,14 +17,24 @@
 ```
 
 ## Luồng dữ liệu (Data Flow)
-1. **PTY Output -> Clients:**
+1. **Authentication (New):** Người dùng phải đăng nhập qua `/api/auth/login`. Server xác thực bằng mật khẩu băm (Argon2) và trả về Session Cookie (HttpOnly).
+2. **PTY Output -> Clients:**
    ...
-2. **Client Input -> PTY:
+3. **Client Input -> PTY:**
    ...
-3. **Terminal Resizing:**
+4. **Terminal Resizing:**
    ...
-4. **Real-time Sync (Dashboard):**
+5. **Real-time Sync (Dashboard):**
    ...
+
+## Bảo mật (Security)
+
+BTerminal triển khai hệ thống bảo mật tự quản (self-contained) để đảm bảo chỉ những người dùng được ủy quyền mới có quyền truy cập vào terminal:
+
+- **Xác thực Cookie-based:** Sử dụng `tower-sessions` để quản lý trạng thái đăng nhập. Cookie được cấu hình với `HttpOnly` và `SameSite=Strict` để chống tấn công XSS và CSRF.
+- **Mã hóa Argon2id:** Mật khẩu người dùng không bao giờ được lưu dưới dạng văn bản thô. BTerminal sử dụng Argon2id (người chiến thắng Password Hashing Competition) với muối (salt) ngẫu nhiên cho mỗi user.
+- **Middleware Authorization:** Mọi request tới API quản lý session hoặc WebSocket terminal đều phải đi qua lớp middleware kiểm tra tính hợp lệ của session. Nếu không hợp lệ, hệ thống trả về mã lỗi `401 Unauthorized`.
+- **Database Cô lập:** Toàn bộ thông tin user và role được lưu trữ trong file SQLite (`bterminal.db`) nằm cục bộ trên server, không yêu cầu kết nối database server bên ngoài.
 
 ## Quản lý vòng đời tiến trình (Subprocess Cleanup)
 

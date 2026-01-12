@@ -1,11 +1,13 @@
 # Codebase Summary
 
 ## Backend (Rust)
-- `src/lib.rs`: The core library containing application logic, routing, and shared modules.
-- `src/main.rs`: Thin binary wrapper. Sets up the Axum server with dynamic port selection (Env > 3000 > Random) and serves the app.
-- `src/api.rs`: REST API endpoints for session management (List, Create, Delete).
-- `src/ws.rs`: WebSocket handler for terminal I/O, PTY resizing, and session history synchronization.
-- **`src/session.rs`**: Session lifecycle management. Includes `SessionRegistry` (now integrated with global broadcast) and `monitor_session` for resource cleanup and real-time deletion notifications.
+- `src/lib.rs`: The core library containing application logic, routing, and shared modules. Now includes **Authentication Middleware** and session cookie management.
+- `src/main.rs`: Thin binary wrapper. Sets up the Axum server with dynamic port selection and initializes the **SQLite Database**.
+- `src/api.rs`: REST API endpoints for session management (Protected by Auth).
+- `src/auth.rs`: **New** Logic for user authentication, password hashing (Argon2), and session handlers (Login/Logout/Me).
+- `src/db.rs`: **New** Database abstraction layer using **SQLite (SQLx)**. Handles user persistence and auto-migration.
+- `src/ws.rs`: WebSocket handler for terminal I/O. Connections now require a valid auth session.
+- **`src/session.rs`**: Session lifecycle management. Includes `SessionRegistry` and `monitor_session`.
 - **`src/pty_manager.rs`**: Direct OS interface for PTY creation and control. Includes **POSIX Process Group** management for robust cleanup of background tasks and a **Watcher Thread** safety net to handle parent process abrupt termination using `nix` and `libc`. Implements `Drop` for automatic resource deallocation.
 
 ## Frontend (HTML/JS)

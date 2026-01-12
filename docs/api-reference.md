@@ -14,19 +14,43 @@ The actual bound address is printed to stdout upon successful startup (e.g., `�
 
 ## REST API
 
+> **Authentication Required**: All endpoints below (except `/api/auth/*`) require a valid session cookie. Requests without authentication will return `401 Unauthorized`.
+
+### Auth Endpoints
+
+#### POST `/api/auth/login`
+Đăng nhập vào hệ thống.
+- **Request Body:** `{"username": "admin", "password": "..."}`
+- **Response (200):** Thông tin user (JSON). Đặt `set-cookie` trong header.
+- **Response (401):** Sai thông tin đăng nhập.
+
+#### POST `/api/auth/logout`
+Đăng xuất và hủy session.
+- **Response (200):** "Logged out"
+
+#### GET `/api/auth/me`
+Lấy thông tin của user hiện tại dựa trên session cookie.
+- **Response (200):** `{"id": 1, "username": "admin", "role": "admin"}`
+- **Response (401):** Chưa đăng nhập.
+
+### Session Management
+
 ### GET `/api/sessions`
 Liệt kê tất cả các phiên làm việc hiện đang hoạt động.
 - **Response (200):** `[{"id": "work"}, {"id": "test"}]`
+- **Response (401):** Unauthorized
 
 ### POST `/api/sessions`
 Tạo một phiên làm việc mới.
 - **Request Body:** `{"id": "string"}`
 - **Response (200):** `"Created"`
+- **Response (401):** Unauthorized
 
 ### DELETE `/api/sessions/{id}`
 Xóa một phiên làm việc và đóng PTY process liên quan.
 - **Response (200):** OK
 - **Response (404):** Not Found
+- **Response (401):** Unauthorized
 
 ### GET `/api/events` (SSE)
 Stream các sự kiện thời gian thực tới Dashboard để cập nhật giao diện mà không cần refresh.

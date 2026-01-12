@@ -23,6 +23,7 @@ cargo run
 ```
 
 ## Features
+- **Built-in Authentication:** Secure access control using SQLite, Argon2id hashing, and session cookies.
 - **Multi-session:** Create and manage independent terminal sessions.
 - **Modern Dashboard:** Content-first layout with real-time session monitoring and count.
 - **Pro Header:** Quick access to session IDs, connectivity status, and easy exit.
