@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2026-01-12
+
+### Added
+- **Mobile Touch Selection**: Implemented a "Long Press" gesture bridge for mobile devices. Since the terminal uses WebGL/Canvas rendering (no DOM text), users can now hold their finger (500ms) on the terminal to trigger text selection handles.
+- **Mobile Touch E2E Suite**: Added `e2e/tests/mobile-ui.spec.ts` test cases to verify that long-press gestures correctly trigger text selection logic in `xterm.js`.
+
 ## [0.1.4] - 2026-01-12
 
 ### Added
@@ -91,5 +97,3 @@ All notable changes to this project will be documented in this file.
 - **Race Condition Mitigation**: Implemented default-hidden UI sections via inline styles to prevent "flicker" and timing issues during page initialization.
 
 ## [0.1.0] - 2026-01-11
-
-

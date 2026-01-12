@@ -19,6 +19,7 @@
   - **Real-time Sync:** Tự động cập nhật danh sách session qua SSE.
   - **Single Binary:** Tích hợp sâu với backend qua `rust-embed`.
   - **Smart Clipboard:** Hỗ trợ Ctrl+C (Copy khi có selection, SIGINT khi không có) và Ctrl+V (Paste) thông minh, giúp trải nghiệm web terminal như ứng dụng native.
+  - **Mobile Touch Selection**: Hỗ trợ cử chỉ "Long Press" để chọn văn bản trên mobile (bridge to mouse events).
 
 ## Testing & Quality
 - **Coverage**: **95.12% line coverage** achieved for the Rust backend.
@@ -29,4 +30,4 @@
 - `e2e/tests/vietnamese-ime.spec.ts`: **New** Verification of Vietnamese Telex typing without duplication.
 - `e2e/tests/terminal-layout.spec.ts`: Verification of full-screen layout and resizing.
 - `e2e/tests/terminal-advanced.spec.ts`: Advanced verification for PTY resizing, special keys (Ctrl+C), session persistence, and UTF-8 rendering.
-
+- `e2e/tests/mobile-ui.spec.ts`: **New** Verification of mobile touch selection, viewport scaling, and keyboard handling.

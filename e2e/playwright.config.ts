@@ -40,6 +40,7 @@ export default defineConfig({
       name: 'WebGL',
       use: { 
         ...devices['Desktop Chrome'],
+        hasTouch: true,
         baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=webgl` : undefined,
       },
     },
@@ -47,6 +48,7 @@ export default defineConfig({
       name: 'Canvas',
       use: { 
         ...devices['Desktop Chrome'],
+        hasTouch: true,
         baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=canvas` : undefined,
       },
     },
@@ -54,6 +56,7 @@ export default defineConfig({
       name: 'DOM-Fallback',
       use: { 
         ...devices['Desktop Chrome'],
+        hasTouch: true,
         baseURL: process.env.BASE_URL ? `${process.env.BASE_URL}?renderer=dom` : undefined,
       },
     },

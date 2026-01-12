@@ -193,4 +193,113 @@ test.describe('Mobile UI', () => {
     const touchAction = await page.locator('#terminal').evaluate((el) => window.getComputedStyle(el).touchAction);
     expect(touchAction).toBe('manipulation');
   });
+
+  test('should allow text selection via long-press touch simulation', async ({ page }) => {
+    // 1. Write some text to terminal to have something to select
+    await page.evaluate(() => {
+      (window as any).term.write('Hello World Selection Test');
+    });
+
+    // Wait for text to render
+    await page.waitForTimeout(500);
+
+    // 2. Simulate long press (touchstart, wait, touchmove slightly, touchend)
+    const terminal = page.locator('#terminal');
+    const box = await terminal.boundingBox();
+    if (!box) throw new Error('Terminal box not found');
+
+    const x = box.x + 10;
+    const y = box.y + 10;
+
+    // Use evaluate to focus terminal instead of tap to avoid context issues
+    await page.evaluate(() => (window as any).term.focus());
+    
+    // Manual event dispatching since Playwright's touch might not trigger our custom listeners 
+    // in exactly the same way a real device would for "long press" logic
+    await page.evaluate(({ x, y }) => {
+      const container = document.getElementById('terminal')!;
+      const touch = {
+        identifier: 1,
+        target: container,
+        clientX: x,
+        clientY: y,
+        pageX: x,
+        pageY: y,
+        screenX: x,
+        screenY: y,
+      };
+      
+      const touchStart = new Touch(touch);
+      const startEv = new TouchEvent('touchstart', {
+        touches: [touchStart],
+        targetTouches: [touchStart],
+        changedTouches: [touchStart],
+        bubbles: true,
+        cancelable: true
+      });
+      container.dispatchEvent(startEv);
+    }, { x, y });
+
+    // Wait for long press timer (500ms)
+    await page.waitForTimeout(700);
+
+    // Move to update selection
+    await page.evaluate(({ x, y }) => {
+      const container = document.getElementById('terminal')!;
+      const x2 = x + 200;
+      const y2 = y + 50;
+      const touch = {
+        identifier: 1,
+        target: container,
+        clientX: x2,
+        clientY: y2,
+        pageX: x2,
+        pageY: y2,
+        screenX: x2,
+        screenY: y2,
+      };
+      const touchMove = new Touch(touch);
+      const moveEv = new TouchEvent('touchmove', {
+        touches: [touchMove],
+        targetTouches: [touchMove],
+        changedTouches: [touchMove],
+        bubbles: true,
+        cancelable: true
+      });
+      container.dispatchEvent(moveEv);
+    }, { x, y });
+
+    // End touch
+    await page.evaluate(({ x, y }) => {
+      const container = document.getElementById('terminal')!;
+      const x2 = x + 200;
+      const y2 = y + 50;
+      const touch = {
+        identifier: 1,
+        target: container,
+        clientX: x2,
+        clientY: y2,
+        pageX: x2,
+        pageY: y2,
+        screenX: x2,
+        screenY: y2,
+      };
+      const touchEnd = new Touch(touch);
+      const endEv = new TouchEvent('touchend', {
+        touches: [],
+        targetTouches: [],
+        changedTouches: [touchEnd],
+        bubbles: true,
+        cancelable: true
+      });
+      container.dispatchEvent(endEv);
+    }, { x, y });
+
+    // 3. Verify xterm.js has selection
+    const hasSelection = await page.evaluate(() => (window as any).term.hasSelection());
+    expect(hasSelection).toBe(true);
+
+    const selection = await page.evaluate(() => (window as any).term.getSelection());
+    expect(selection.length).toBeGreaterThan(0);
+  });
 });

@@ -407,6 +407,76 @@
 
             term.open(container);
 
+            // Bridge for Long Press to Selection on Mobile
+            let touchTimer;
+            let isSelecting = false;
+            const LONG_PRESS_DURATION = 500;
+
+            const dispatchMouseEvent = (type, touch) => {
+                const screen = container.querySelector('.xterm-screen');
+                const target = document.elementFromPoint(touch.clientX, touch.clientY) || screen;
+                if (!target) return;
+                
+                // If the target is not the screen or a child of it, and we have a screen, use the screen
+                const finalTarget = (screen && (target === screen || screen.contains(target))) ? target : screen;
+                if (!finalTarget) return;
+
+                const ev = new MouseEvent(type, {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    button: 0,
+                    buttons: type === 'mouseup' ? 0 : 1,
+                    detail: type === 'mousedown' ? 1 : 0
+                });
+                // Legacy property for older event handling
+                Object.defineProperty(ev, 'which', { get: () => type === 'mouseup' ? 0 : 1 });
+                
+                finalTarget.dispatchEvent(ev);
+            };
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length !== 1) return;
+                const touch = e.touches[0];
+                clearTimeout(touchTimer);
+                touchTimer = setTimeout(() => {
+                    isSelecting = true;
+                    dispatchMouseEvent('mousedown', touch);
+                    // Provide haptic feedback if available
+                    if (window.navigator && window.navigator.vibrate) {
+                        window.navigator.vibrate(50);
+                    }
+                }, LONG_PRESS_DURATION);
+            }, { passive: false });
+
+            container.addEventListener('touchmove', (e) => {
+                if (isSelecting) {
+                    e.preventDefault(); // Stop scrolling when selecting
+                    dispatchMouseEvent('mousemove', e.touches[0]);
+                } else {
+                    // Small threshold for jitter
+                    const touch = e.touches[0];
+                    // If moving too much, it's a scroll
+                    clearTimeout(touchTimer);
+                }
+            }, { passive: false });
+
+            container.addEventListener('touchend', (e) => {
+                clearTimeout(touchTimer);
+                if (isSelecting) {
+                    dispatchMouseEvent('mouseup', e.changedTouches[0]);
+                    isSelecting = false;
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            container.addEventListener('touchcancel', () => {
+                clearTimeout(touchTimer);
+                isSelecting = false;
+            });
+
             // Smart Copy/Paste Handling
             term.attachCustomKeyEventHandler((ev) => {
                 // Ctrl+C: Copy if selection exists, else send SIGINT
