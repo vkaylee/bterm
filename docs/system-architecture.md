@@ -103,9 +103,9 @@ BTerminal sử dụng cơ chế render 3 tầng (3-Tier Fallback) để đảm b
 
 BTerminal employs a strictly isolated testing strategy to ensure reliability and parallelism:
 
-1.  **Unit & Integration Tests**: Backend logic (PTY management, session monitoring) is tested using standard `cargo test`. Integration tests verify the dynamic port binding logic by simulating collisions and environment overrides.
+1.  **Unit & Integration Tests**: Backend logic (PTY management, session monitoring, Auth flow) is tested using standard `cargo test`. Integration tests verify the dynamic port binding logic and SQLite persistence.
 2.  **E2E Isolation (Worker-Scoped)**: 
     - Playwright is configured to run tests in parallel.
-    - Each test worker utilizes a custom fixture (`e2e/fixtures.ts`) that spawns a dedicated BTerminal backend instance.
-    - Servers are bound to a random port (`PORT=0`) provided by the OS, preventing conflict between parallel workers.
-    - This architecture ensures that each test suite starts with a fresh `SessionRegistry`, preventing state leakage and making tests deterministic.
+    - **Dedicated Backend**: Each test worker utilizes a custom fixture (`e2e/fixtures.ts`) that spawns a dedicated BTerminal backend instance on a random port.
+    - **In-Memory Persistence**: Every worker uses its own isolated **In-Memory SQLite** database. This ensures zero state leakage between workers and eliminates database file locks.
+    - **Auto-Authentication**: The test fixture automatically performs a backend login via the API and injects the session cookie into the browser context before any test code runs. This allows tests to focus on feature logic while maintaining full security coverage.

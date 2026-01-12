@@ -27,6 +27,7 @@
 ## Testing & Quality
 - **Coverage**: **95.12% line coverage** achieved for the Rust backend.
 - `tests/sse_integration.rs`: New integration tests for SSE event streaming.
+- `e2e/tests/auth.spec.ts`: **New** Verification of login redirection, credentials validation, and session persistence.
 - `e2e/tests/clipboard.spec.ts`: **New** Verification of Smart Ctrl+C/V logic and clipboard permissions.
 - `e2e/tests/sync-management.spec.ts`: Verification of multi-device synchronization.
 - `e2e/tests/shared-resize.spec.ts`: **New** Verification of Max-Dimension logic (Approach C) across multiple browsers.

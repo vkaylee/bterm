@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-01-13
+
+### Added
+- **E2E Auth Integration**: Updated Playwright fixtures to automatically perform an API login before every test context. This ensures seamless end-to-end testing of protected routes.
+- **E2E Worker Isolation**: Each test worker now uses its own **In-Memory SQLite Database** (`DATABASE_URL=sqlite::memory:`). This prevents state leakage, file system conflicts, and database locks during high-concurrency parallel testing.
+- **Auto-Redirect Logic**: Enhanced the frontend dashboard to automatically detect `401 Unauthorized` responses and redirect the user to the login page.
+- **Comprehensive Auth E2E Suite**: Added `e2e/tests/auth.spec.ts` to verify redirection, successful login, error handling, and session persistence.
+
+### Fixed
+- **Brittle E2E Selectors**: Updated layout tests to use more robust text-based selectors (e.g., `Create Session` instead of `Create`).
+- **Layout Initialization Race**: Increased timeout and added visibility checks for terminal initialization in E2E tests to ensure reliable layout verification.
+
 ## [0.2.0] - 2026-01-13
 
 ### Added
