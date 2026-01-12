@@ -7,12 +7,14 @@ use bterminal::api::{events_handler, create_session, CreateSessionRequest};
 use tokio::sync::broadcast;
 use futures_util::StreamExt;
 use axum::extract::{State, Json};
+use bterminal::db::Db;
 
 #[tokio::test]
 async fn test_sse_events_flow() {
     let (tx, _) = broadcast::channel(10);
     let registry = Arc::new(SessionRegistry::new(tx.clone()));
-    let state = Arc::new(AppState { registry: registry.clone(), tx: tx.clone() });
+    let db = Db::new("sqlite::memory:").await.unwrap();
+    let state = Arc::new(AppState { registry: registry.clone(), tx: tx.clone(), db });
 
     let app = Router::new()
         .route("/api/events", get(events_handler))
@@ -53,7 +55,8 @@ async fn test_sse_events_flow() {
 async fn test_sse_automatic_exit_flow() {
     let (tx, _) = broadcast::channel(10);
     let registry = Arc::new(SessionRegistry::new(tx.clone()));
-    let state = Arc::new(AppState { registry: registry.clone(), tx: tx.clone() });
+    let db = Db::new("sqlite::memory:").await.unwrap();
+    let state = Arc::new(AppState { registry: registry.clone(), tx: tx.clone(), db });
 
     let app = Router::new()
         .route("/api/events", get(events_handler))

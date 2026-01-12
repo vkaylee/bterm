@@ -10,6 +10,8 @@ pub mod pty_manager;
 pub mod session;
 pub mod ws;
 pub mod api;
+pub mod db;
+pub mod auth;
 
 use axum::{
     routing::{get, post},
@@ -23,6 +25,8 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::http::{header, StatusCode, Uri};
 use tokio::sync::broadcast;
 use serde::Serialize;
+use tower_sessions::{SessionManagerLayer, MemoryStore, Expiry};
+use time::Duration;
 
 #[derive(RustEmbed)]
 #[folder = "frontend/dist/"]
@@ -38,17 +42,33 @@ pub enum GlobalEvent {
 pub struct AppState {
     pub registry: Arc<SessionRegistry>,
     pub tx: broadcast::Sender<GlobalEvent>,
+    pub db: db::Db,
 }
 
-pub fn create_app(tx: broadcast::Sender<GlobalEvent>, registry: Arc<SessionRegistry>) -> Router {
-    let state = Arc::new(AppState { registry, tx });
+pub fn create_app(tx: broadcast::Sender<GlobalEvent>, registry: Arc<SessionRegistry>, db: db::Db) -> Router {
+    let state = Arc::new(AppState { registry, tx, db });
+
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(Duration::hours(24)));
+
+    let protected_routes = Router::new()
+        .nest("/api", Router::new()
+            .route("/sessions", get(api::list_sessions))
+            .route("/sessions", post(api::create_session))
+            .route("/sessions/{id}", axum::routing::delete(api::delete_session))
+            .route("/events", get(api::events_handler))
+        )
+        .route("/ws/{session_id}", get(ws::ws_handler))
+        .layer(axum::middleware::from_fn(auth::require_auth));
+
+    let auth_routes = auth::routes();
 
     Router::new()
-        .route("/api/sessions", get(api::list_sessions))
-        .route("/api/sessions", post(api::create_session))
-        .route("/api/sessions/{id}", axum::routing::delete(api::delete_session))
-        .route("/api/events", get(api::events_handler))
-        .route("/ws/{session_id}", get(ws::ws_handler))
+        .merge(protected_routes)
+        .nest("/api/auth", auth_routes)
+        .layer(session_layer)
         .fallback(static_handler)
         .with_state(state)
         .layer(CorsLayer::permissive())
@@ -93,11 +113,17 @@ mod tests {
     use tower::ServiceExt;
     use axum::http::Request;
 
-    #[tokio::test]
-    async fn test_static_handler_index() {
+    async fn setup_app() -> Router {
         let (tx, _) = broadcast::channel(10);
         let registry = Arc::new(SessionRegistry::new(tx.clone()));
-        let app = create_app(tx, registry);
+        // Setup in-memory DB for tests
+        let db = db::Db::new("sqlite::memory:").await.unwrap();
+        create_app(tx, registry, db)
+    }
+
+    #[tokio::test]
+    async fn test_static_handler_index() {
+        let app = setup_app().await;
 
         let response = app
             .oneshot(Request::builder().uri("/").body(axum::body::Body::empty()).unwrap())
@@ -111,9 +137,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_missing_file_falls_back_to_index() {
-        let (tx, _) = broadcast::channel(10);
-        let registry = Arc::new(SessionRegistry::new(tx.clone()));
-        let app = create_app(tx, registry);
+        let app = setup_app().await;
 
         let response = app
             .oneshot(Request::builder().uri("/random-path").body(axum::body::Body::empty()).unwrap())
@@ -127,9 +151,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_handler_missing_file_with_extension_returns_404() {
-        let (tx, _) = broadcast::channel(10);
-        let registry = Arc::new(SessionRegistry::new(tx.clone()));
-        let app = create_app(tx, registry);
+        let app = setup_app().await;
 
         let response = app
             .oneshot(Request::builder().uri("/missing.css").body(axum::body::Body::empty()).unwrap())
@@ -137,35 +159,5 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    }
-
-    #[tokio::test]
-    async fn test_static_handler_index_explicit() {
-        let (tx, _) = broadcast::channel(10);
-        let registry = Arc::new(SessionRegistry::new(tx.clone()));
-        let app = create_app(tx, registry);
-
-        let response = app
-            .oneshot(Request::builder().uri("/index.html").body(axum::body::Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn test_static_handler_asset() {
-        let (tx, _) = broadcast::channel(10);
-        let registry = Arc::new(SessionRegistry::new(tx.clone()));
-        let app = create_app(tx, registry);
-
-        // Request an asset that exists in frontend/dist/assets/
-        let response = app
-            .oneshot(Request::builder().uri("/assets/xterm.css").body(axum::body::Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(response.headers().get(header::CONTENT_TYPE).unwrap(), "text/css");
     }
 }

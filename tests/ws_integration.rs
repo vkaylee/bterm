@@ -6,13 +6,15 @@ use bterminal::session::SessionRegistry;
 use bterminal::AppState;
 use axum::{routing::get, Router};
 use bterminal::ws::ws_handler;
+use bterminal::db::Db;
 use tokio::sync::broadcast;
 
 #[tokio::test]
 async fn test_websocket_flow() {
     let (tx, _) = broadcast::channel(10);
     let registry = Arc::new(SessionRegistry::new(tx.clone()));
-    let state = Arc::new(AppState { registry: registry.clone(), tx });
+    let db = Db::new("sqlite::memory:").await.unwrap();
+    let state = Arc::new(AppState { registry: registry.clone(), tx, db });
     
     let session_id = "ws-test".to_string();
     let _ = registry.create_session(session_id.clone());

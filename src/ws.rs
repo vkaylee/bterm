@@ -67,7 +67,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
                     }
                     
                     // Kiểm tra xem đây có phải là tin nhắn điều khiển JSON không (SetSize, v.v.)
-                    if data.starts_with(b"{\"type\":")
+                    if data.starts_with(br#"{"type":"#)
                         && let Ok(text) = String::from_utf8(data.clone()) {
                         if let Err(e) = sender.send(Message::Text(text.into())).await {
                             println!("WS send error (text): {e}");
@@ -83,7 +83,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    println!("WS forwarder lagged by {n} messages");
+                    println!("WS forwarder lagged by {} messages", n);
                 }
                 Err(_) => break, // Channel closed
             }
@@ -98,8 +98,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let Message::Text(text) = msg
-                && let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text)
-            {
+                && let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
                 match client_msg {
                     ClientMessage::Input(data) => {
                         if let Err(e) = pty.write(data.as_bytes()) {
@@ -127,261 +126,103 @@ async fn handle_socket(socket: WebSocket, session: Session) {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-
     use axum::http::StatusCode;
-
     use axum::{routing::get, Router};
-
     use crate::session::SessionRegistry;
-
+    use crate::db::Db;
     use tokio::sync::broadcast;
 
-
-
-        fn setup_state() -> Arc<AppState> {
-
-
-
-            let (tx, _) = broadcast::channel(10);
-
-
-
-            let registry = Arc::new(SessionRegistry::new(tx.clone()));
-
-
-
-            Arc::new(AppState { registry, tx })
-
-
-
-        }
-
-
+    async fn setup_state() -> Arc<AppState> {
+        let (tx, _) = broadcast::channel(10);
+        let registry = Arc::new(SessionRegistry::new(tx.clone()));
+        let db = Db::new("sqlite::memory:").await.unwrap();
+        Arc::new(AppState { registry, tx, db })
+    }
 
     #[test]
-
     fn test_client_message_deserialization() {
-
         let input_json = r#"{"type": "Input", "data": "ls\n"}"#;
-
         let msg: ClientMessage = serde_json::from_str(input_json).unwrap();
-
         match msg {
-
             ClientMessage::Input(data) => assert_eq!(data, "ls\n"),
-
             ClientMessage::Resize { .. } => panic!("Expected Input"),
-
         }
-
-
 
         let resize_json = r#"{"type": "Resize", "data": {"rows": 24, "cols": 80}}"#;
-
         let msg: ClientMessage = serde_json::from_str(resize_json).unwrap();
-
         match msg {
-
             ClientMessage::Resize { rows, cols } => {
-
                 assert_eq!(rows, 24);
-
                 assert_eq!(cols, 80);
-
             }
-
             ClientMessage::Input(_) => panic!("Expected Resize"),
-
         }
-
     }
 
+    #[tokio::test]
+    #[allow(clippy::literal_string_with_formatting_args)]
+    async fn test_ws_handler_not_found() {
+        use tokio_tungstenite::connect_async;
+        use tokio::net::TcpListener;
 
-
-        #[tokio::test]
-
-
-
-        #[allow(clippy::literal_string_with_formatting_args)]
-
-
-
-        async fn test_ws_handler_not_found() {
-
-
-
-            use tokio_tungstenite::connect_async;
-
-
-
-            use tokio::net::TcpListener;
-
-
-
-    
-
-
-
-            let state = setup_state();
-
-
-
-            let app = Router::new()
-
-
-
-                .route("/ws/{session_id}", get(ws_handler))
-
-
-
-                .with_state(state);
-
-
+        let state = setup_state().await;
+        let app = Router::new()
+            .route("/ws/{session_id}", get(ws_handler))
+            .with_state(state);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-
         let addr = listener.local_addr().unwrap();
-
         
-
         tokio::spawn(async move {
-
             axum::serve(listener, app).await.unwrap();
-
         });
 
-
-
-        let url = format!("ws://{addr}/ws/invalid");
-
+        let url = format!("ws://{}/ws/invalid", addr);
         let result = connect_async(url).await;
-
         match result {
-
             Err(tokio_tungstenite::tungstenite::Error::Http(resp)) => {
-
                 assert_eq!(resp.status(), StatusCode::OK);
-
                 let body = resp.into_body().unwrap();
-
                 assert_eq!(body, b"Session not found");
-
             }
-
-            _ => panic!("Expected HTTP error with Session not found message, got {result:?}"),
-
+            _ => panic!("Expected HTTP error with Session not found message, got {:?}", result),
         }
-
     }
 
+    #[tokio::test]
+    #[allow(clippy::literal_string_with_formatting_args)]
+    async fn test_ws_history_sent() {
+        use tokio_tungstenite::connect_async;
+        use tokio::net::TcpListener;
 
+        let state = setup_state().await;
+        let session_id = "history-test".to_string();
+        let session = state.registry.create_session(session_id.clone());
+        
+        // Add some history
+        {
+            let mut history = session.history.lock().unwrap();
+            history.extend_from_slice(b"old data");
+        }
 
-        #[tokio::test]
-
-
-
-        #[allow(clippy::literal_string_with_formatting_args)]
-
-
-
-        async fn test_ws_history_sent() {
-
-
-
-            use tokio_tungstenite::connect_async;
-
-
-
-            use tokio::net::TcpListener;
-
-
-
-    
-
-
-
-            let state = setup_state();
-
-
-
-            let session_id = "history-test".to_string();
-
-
-
-            let session = state.registry.create_session(session_id.clone());
-
-
-
-            
-
-
-
-            // Add some history
-
-
-
-            {
-
-
-
-                let mut history = session.history.lock().unwrap();
-
-
-
-                history.extend_from_slice(b"old data");
-
-
-
-            }
-
-
-
-    
-
-
-
-            let app = Router::new()
-
-
-
-                .route("/ws/{session_id}", get(ws_handler))
-
-
-
-                .with_state(state);
-
-
+        let app = Router::new()
+            .route("/ws/{session_id}", get(ws_handler))
+            .with_state(state);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-
         let addr = listener.local_addr().unwrap();
-
         
-
         tokio::spawn(async move {
-
             axum::serve(listener, app).await.unwrap();
-
         });
 
-
-
-        let url = format!("ws://{addr}/ws/{session_id}");
-
+        let url = format!("ws://{}/ws/{}", addr, session_id);
         let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
-
         let (_, mut read) = ws_stream.split();
 
-
-
         // First message should be the history
-
         let msg = read.next().await.unwrap().unwrap();
-
         assert_eq!(msg.into_data().as_ref(), b"old data");
-
     }
-
 }

@@ -61,17 +61,19 @@ mod tests {
     use super::*;
     use axum::extract::Path;
     use crate::session::SessionRegistry;
+    use crate::db::Db;
     use tokio::sync::broadcast;
 
-    fn setup() -> Arc<AppState> {
+    async fn setup() -> Arc<AppState> {
         let (tx, _) = broadcast::channel(10);
         let registry = Arc::new(SessionRegistry::new(tx.clone()));
-        Arc::new(AppState { registry, tx })
+        let db = Db::new("sqlite::memory:").await.unwrap();
+        Arc::new(AppState { registry, tx, db })
     }
 
     #[tokio::test]
     async fn test_create_and_list_sessions() {
-        let state = setup();
+        let state = setup().await;
         
         // Create
         let req = Json(CreateSessionRequest { id: "test-id".to_string() });
@@ -85,7 +87,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_session() {
-        let state = setup();
+        let state = setup().await;
         let _ = state.registry.create_session("delete-me".to_string());
         
         delete_session(State(state.clone()), Path("delete-me".to_string())).await;

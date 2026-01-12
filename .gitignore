@@ -21,3 +21,4 @@ Thumbs.db
 # Gemini / Temp
 .gemini/
 *.log
+*.db
