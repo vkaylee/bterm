@@ -67,14 +67,13 @@ async fn handle_socket(socket: WebSocket, session: Session) {
                     }
                     
                     // Kiểm tra xem đây có phải là tin nhắn điều khiển JSON không (SetSize, v.v.)
-                    if data.starts_with(b"{\"type\":") {
-                        if let Ok(text) = String::from_utf8(data.clone()) {
-                            if let Err(e) = sender.send(Message::Text(text.into())).await {
-                                println!("WS send error (text): {e}");
-                                return;
-                            }
-                            continue;
+                    if data.starts_with(b"{\"type\":")
+                        && let Ok(text) = String::from_utf8(data.clone()) {
+                        if let Err(e) = sender.send(Message::Text(text.into())).await {
+                            println!("WS send error (text): {e}");
+                            return;
                         }
+                        continue;
                     }
 
                     let bin_data: Vec<u8> = data;
@@ -84,8 +83,7 @@ async fn handle_socket(socket: WebSocket, session: Session) {
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    println!("WS forwarder lagged by {} messages", n);
-                    continue;
+                    println!("WS forwarder lagged by {n} messages");
                 }
                 Err(_) => break, // Channel closed
             }

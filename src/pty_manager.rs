@@ -29,14 +29,14 @@ impl PtyManager {
             let mut cmd = CommandBuilder::new(shell);
             cmd.env("TERM", "xterm-256color");
             cmd.env("COLORTERM", "truecolor");
-            cmd.env("LANG", "en_US.UTF-8");
+            cmd.env("LANG", "C.UTF-8");
     
             let child = pair.slave.spawn_command(cmd).unwrap();
             
             #[cfg(unix)]
             {
                 if let Some(pid) = child.process_id() {
-                    let pid = pid as i32;
+                    let pid = pid.cast_signed();
                     // Watcher thread: kill child group if parent (bterminal) dies
                     thread::spawn(move || {
                         let parent_pid = unsafe { libc::getppid() };
@@ -77,7 +77,7 @@ impl PtyManager {
                 use nix::unistd::Pid;
                 // Kill the entire process group. 
                 // portable_pty calls setsid() so the child is a PGID leader.
-                let _ = kill(Pid::from_raw(-(pid as i32)), Signal::SIGKILL);
+                let _ = kill(Pid::from_raw(-pid.cast_signed()), Signal::SIGKILL);
             }
             // Reap the child process to avoid zombies.
             let _ = child.wait();

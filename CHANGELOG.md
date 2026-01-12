@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2026-01-12
+
+### Fixed
+- **Robust Mobile IME Composition**: Fixed a critical bug where typing complex Vietnamese characters (e.g., "chào") on Android/Gboard resulted in duplicated or corrupted text ("chachàào").
+    - **Blocking Logic**: Implemented an `isComposing` state flag that blocks all data transmission to the backend while an IME composition is in progress.
+    - **Event Reliability**: Added a `waitForTextarea` retry mechanism in the frontend to ensure `compositionstart` and `compositionend` listeners are reliably attached to the Xterm hidden textarea, even if DOM initialization is delayed.
+    - **State Synchronization**: Added a safety delay on `compositionend` to ensure any final browser `input` events are correctly ignored before resuming normal transmission.
+
 ## [0.1.5] - 2026-01-12
 
 ### Added

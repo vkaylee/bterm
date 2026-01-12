@@ -17,7 +17,8 @@
   - **Dynamic Viewport Scaling:** Sử dụng `VisualViewport API` để thay đổi chiều cao ứng dụng khi bàn phím mobile hiện lên, ngăn chặn việc che khuất nội dung.
   - **Sticky Modifiers:** Hỗ trợ phím chức năng ảo (Ctrl, Alt) trên mobile.
   - **Real-time Sync:** Tự động cập nhật danh sách session qua SSE.
-  - **Single Binary:** Tích hợp sâu với backend qua `rust-embed`.
+  - **Single Binary**: Tích hợp sâu với backend qua `rust-embed`.
+  - **Robust IME Handling**: Ngăn chặn việc lặp ký tự khi gõ Telex trên mobile (Gboard/Android) bằng cách block data transmission trong quá trình `composition`. Tự động gắn listeners vào hidden textarea với cơ chế retry thông minh.
   - **Smart Clipboard:** Hỗ trợ Ctrl+C (Copy khi có selection, SIGINT khi không có) và Ctrl+V (Paste) thông minh, giúp trải nghiệm web terminal như ứng dụng native.
   - **Mobile Touch Selection**: Hỗ trợ cử chỉ "Long Press" để chọn văn bản trên mobile (bridge to mouse events).
 

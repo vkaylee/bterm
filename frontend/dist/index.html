@@ -332,7 +332,7 @@
             const container = document.getElementById('terminal');
             container.innerHTML = '';
             
-            const isMobile = window.innerWidth < 640;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 640;
             term = new Terminal({
                 cursorBlink: true,
                 fontSize: isMobile ? 14 : 15,
@@ -495,17 +495,61 @@
                 return true;
             });
 
-            // Tối ưu hóa cho IME (Vietnamese Telex, v.v.) trên mobile
-            if (isMobile) {
+            // Tối ưu hóa cho IME (Vietnamese Telex, v.v.)
+            // Flag to track if the user is currently composing text (IME)
+            let isComposing = false;
+
+            function waitForTextarea(retries = 10) {
                 const textarea = container.querySelector('.xterm-helper-textarea');
                 if (textarea) {
-                    // Disable autocorrect and spellcheck to prevent double-input in Telex
-                    textarea.setAttribute('autocorrect', 'off');
-                    textarea.setAttribute('autocapitalize', 'none');
-                    textarea.setAttribute('spellcheck', 'false');
-                    textarea.setAttribute('inputmode', 'text');
+                    console.log("IME: Textarea found, attaching listeners.");
+                    attachImeListeners(textarea);
+                } else if (retries > 0) {
+                    console.warn(`IME: Textarea not found, retrying... (${retries})`);
+                    setTimeout(() => waitForTextarea(retries - 1), 100);
+                } else {
+                    console.error("IME: Failed to find xterm textarea. IME handling may be broken.");
                 }
             }
+
+            function attachImeListeners(textarea) {
+                // Disable autocorrect and spellcheck to prevent double-input in Telex
+                textarea.setAttribute('autocorrect', 'off');
+                textarea.setAttribute('autocapitalize', 'none');
+                textarea.setAttribute('spellcheck', 'false');
+                textarea.setAttribute('inputmode', 'text');
+
+                // Manual Context Injection for IME:
+                textarea.addEventListener('compositionstart', () => {
+                    console.log("IME: compositionstart");
+                    isComposing = true;
+                    if (term && term.buffer.active) {
+                        const buffer = term.buffer.active;
+                        const cursorY = buffer.cursorY + buffer.viewportY;
+                        const line = buffer.getLine(cursorY);
+                        if (line) {
+                            const cursorX = buffer.cursorX;
+                            // Get the text before the cursor
+                            const text = line.translateToString(true).substring(0, cursorX);
+                            // Only inject if the textarea is empty
+                            if (text && textarea.value === '') {
+                                textarea.value = text;
+                                textarea.setSelectionRange(text.length, text.length);
+                            }
+                        }
+                    }
+                });
+
+                textarea.addEventListener('compositionend', () => {
+                    console.log("IME: compositionend");
+                    isComposing = false;
+                    // Force a small delay to ensure any pending 'input' events processed by xterm
+                    // are also blocked or handled correctly if they arrive out of order.
+                    setTimeout(() => { isComposing = false; }, 10);
+                });
+            }
+
+            waitForTextarea();
 
             if (requestedRenderer === 'dom') {
                 console.log("Forcing DOM renderer");
@@ -621,6 +665,9 @@
             };
             
             term.onData(data => {
+                // Block sending data while IME is composing (prevents double chars on mobile)
+                if (isComposing) return;
+
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     let finalData = data;
                     

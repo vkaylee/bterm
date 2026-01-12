@@ -20,14 +20,14 @@ pub struct Session {
 
 impl Session {
     pub fn update_client_size(&self, client_id: uuid::Uuid, rows: u16, cols: u16) {
-        let mut sizes = self.client_sizes.lock().unwrap();
-        sizes.insert(client_id, (rows, cols));
+        self.client_sizes.lock().unwrap().insert(client_id, (rows, cols));
+        let sizes = self.client_sizes.lock().unwrap();
         self.recalculate_pty_size(&sizes);
     }
 
     pub fn remove_client(&self, client_id: uuid::Uuid) {
-        let mut sizes = self.client_sizes.lock().unwrap();
-        if sizes.remove(&client_id).is_some() {
+        if self.client_sizes.lock().unwrap().remove(&client_id).is_some() {
+            let sizes = self.client_sizes.lock().unwrap();
             self.recalculate_pty_size(&sizes);
         }
     }
@@ -49,7 +49,7 @@ impl Session {
             let _ = self.pty_manager.resize(max_rows, max_cols);
             
             // Thông báo kích thước PTY mới cho tất cả các client để đồng bộ UI
-            let msg = format!(r#"{{"type": "SetSize", "data": {{"rows": {}, "cols": {}}}}}"#, max_rows, max_cols);
+            let msg = format!(r#"{{"type": "SetSize", "data": {{"rows": {max_rows}, "cols": {max_cols}}}}}"#);
             let _ = self.broadcast_tx.send(msg.into_bytes());
         }
     }
