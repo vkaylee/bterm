@@ -183,4 +183,14 @@ test.describe('Mobile UI', () => {
     const finalHeight = await app.evaluate((el) => parseFloat(el.style.height));
     expect(finalHeight).toBe(initialHeight - 9);
   });
+
+  test('should allow user scaling and have manipulation touch-action for dragging/zooming', async ({ page }) => {
+    // 1. Check viewport meta tag for user-scalable
+    const viewportMeta = await page.locator('meta[name="viewport"]').getAttribute('content');
+    expect(viewportMeta).toContain('user-scalable=yes');
+
+    // 2. Check touch-action on #terminal
+    const touchAction = await page.locator('#terminal').evaluate((el) => window.getComputedStyle(el).touchAction);
+    expect(touchAction).toBe('manipulation');
+  });
 });

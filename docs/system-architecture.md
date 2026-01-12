@@ -18,22 +18,28 @@
 
 ## Luồng dữ liệu (Data Flow)
 1. **PTY Output -> Clients:**
-   - PTY Process tạo output bytes.
-   - Một luồng (thread) đọc output và gửi vào `tokio::sync::broadcast` channel của session.
-   - Hàm `monitor_session` lắng nghe channel này để:
-     - Cập nhật buffer lịch sử (100KB gần nhất).
-     - Phát hiện **Termination Signal** (vector rỗng) và:
-       - Tự động xóa session khỏi `SessionRegistry`.
-       - Phát một sự kiện `SessionDeleted` tới **Global Broadcast Channel** để thông báo cho toàn bộ các Dashboard đang mở (qua SSE).
-   - `ws_handler` nhận tín hiệu này qua channel, thoát vòng lặp binary và gửi gói tin JSON `{"type": "Exit"}` tới Browser trước khi đóng socket.
-2. **Client Input -> PTY:**
+   ...
+2. **Client Input -> PTY:
    ...
 3. **Terminal Resizing:**
    ...
 4. **Real-time Sync (Dashboard):**
-   - Khi một session được tạo hoặc xóa, Server gửi một sự kiện thông qua `tokio::sync::broadcast` channel toàn cục.
-   - Endpoint `/api/events` (Server-Sent Events) lắng nghe channel này và đẩy thông báo tới toàn bộ Dashboard đang mở.
-   - Browser tự động cập nhật danh sách session hoặc hiển thị thông báo nếu session hiện tại bị xóa, đảm bảo tính nhất quán dữ liệu giữa nhiều thiết bị.
+   ...
+
+## Quản lý vòng đời tiến trình (Subprocess Cleanup)
+
+Để ngăn chặn tình trạng rò rỉ tài nguyên (resource leaking) khi các session kết thúc hoặc khi ứng dụng gặp sự cố, BTerminal áp dụng cơ chế quản lý tiến trình 3 lớp dựa trên **POSIX Process Groups (PGID)**:
+
+1. **Dọn dẹp chủ động (Manual Shutdown):** Khi một session bị xóa khỏi registry (ví dụ: qua Dashboard), hệ thống gửi tín hiệu `SIGKILL` tới toàn bộ Process Group của session đó.
+2. **Dọn dẹp tự động (Drop Trait):** Khi đối tượng `PtyManager` bị hủy khỏi bộ nhớ (drop), nó tự động gọi hàm `shutdown()` để giải phóng PTY và tiêu diệt các tiến trình liên quan.
+3. **Safety Net (Watcher Thread):** Đối với các trường hợp ứng dụng chính bị tắt đột ngột (crash hoặc `kill -9`), BTerminal khởi tạo một background thread cho mỗi session:
+    - Thread này sử dụng `libc::getppid()` để theo dõi PID của tiến trình cha.
+    - Nếu tiến trình cha biến mất (PID cha đổi thành 1 - init), watcher thread sẽ ngay lập tức thực hiện `Recursive Kill` cho process group con rồi mới kết thúc.
+
+**Cơ chế kỹ thuật:**
+- **PGID Leadership:** Shell được thiết lập làm session leader.
+- **Recursive Kill:** Sử dụng `kill(-PID, SIGKILL)` (dấu trừ chỉ định gửi tới toàn bộ group).
+- **Libraries:** Sử dụng crate `nix` và `libc` để thao tác trực tiếp với Unix signals và PID một cách an toàn.
 
 ## Frontend Rendering Strategy
 

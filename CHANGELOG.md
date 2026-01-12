@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-01-12
+
+### Added
+- **Subprocess Group Management**: Implemented robust subprocess cleanup using POSIX Process Groups (PGID). When a PTY shell is spawned, it is established as a session leader, and all background processes spawned within that shell stay in the same PGID.
+- **Reliable Session Shutdown**: Enhanced `PtyManager` with an explicit `shutdown()` method and `Drop` implementation. When a session is removed or the manager is dropped, a `SIGKILL` is sent to the entire process group (`-PID`), ensuring no orphaned processes (like `sleep`, `top`, or long-running builds) are left running.
+- **Watcher Thread "Safety Net"**: Added a background watcher thread to each session that monitors the parent PID. If the main `bterminal` process crashes or is killed with `SIGKILL`, the watcher thread detects the parent change and automatically cleans up the child process group.
+- **Process Group Cleanup Tests**: Added comprehensive unit tests in `src/pty_manager.rs` to verify that both the shell and its background children are correctly terminated upon session shutdown.
+- **Dependency Integration**: Added `nix` and `libc` crates to manage Unix signals and parent PID monitoring safely.
+
 ## [0.1.2] - 2026-01-12
 
 ### Added

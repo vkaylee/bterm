@@ -6,7 +6,7 @@
 - `src/api.rs`: REST API endpoints for session management (List, Create, Delete).
 - `src/ws.rs`: WebSocket handler for terminal I/O, PTY resizing, and session history synchronization.
 - **`src/session.rs`**: Session lifecycle management. Includes `SessionRegistry` (now integrated with global broadcast) and `monitor_session` for resource cleanup and real-time deletion notifications.
-- **`src/pty_manager.rs`**: Direct OS interface for PTY creation and control.
+- **`src/pty_manager.rs`**: Direct OS interface for PTY creation and control. Includes **POSIX Process Group** management for robust cleanup of background tasks and a **Watcher Thread** safety net to handle parent process abrupt termination using `nix` and `libc`. Implements `Drop` for automatic resource deallocation.
 
 ## Frontend (HTML/JS)
 - `frontend/dist/index.html`: Giao diện người dùng duy nhất (SPA). Sử dụng Tailwind CSS cho layout và Xterm.js cho terminal.

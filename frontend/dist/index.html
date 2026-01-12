@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>BTerminal</title>
     <script src="./assets/tailwindcss.js"></script>
     <link rel="stylesheet" href="./assets/xterm.css" />
@@ -22,11 +22,12 @@
             font-family: 'JetBrains Mono', monospace;
         }
         .xterm-viewport { overflow-y: auto !important; }
+        .xterm-screen { touch-action: manipulation !important; }
         #terminal { 
             background-color: black; 
             will-change: transform;
             backface-visibility: hidden;
-            touch-action: pan-y;
+            touch-action: manipulation;
             margin: auto; /* Căn giữa terminal khi buffer nhỏ hơn container */
             display: block;
         }
@@ -35,6 +36,7 @@
             background-color: #000;
             width: 100%;
             height: 100%;
+            -webkit-overflow-scrolling: touch;
         }
         /* Style cho các nút điều khiển trên mobile */
         .btn-ctrl {
@@ -131,7 +133,7 @@
         </main>
 
         <!-- Terminal View -->
-        <div id="terminal-view" class="hidden flex-1 flex-col bg-black relative w-full overflow-hidden">
+        <div id="terminal-view" class="hidden flex-1 flex-col bg-black relative w-full overflow-auto">
             <div id="terminal" class="flex-1 w-full h-full overflow-hidden"></div>
             
             <!-- Mobile Controls -->

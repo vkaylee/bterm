@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
+libc = "0.2"
 axum = { version = "0.8.8", features = ["macros", "ws"] }
 axum-extra = { version = "0.12.5", features = ["typed-header"] }
 futures-util = "0.3.31"
@@ -19,11 +20,13 @@ tower-http = { version = "0.6.8", features = ["fs", "cors", "trace"] }
 hyper-util = "0.1.19"
 tokio-stream = "0.1.18"
 async-stream = "0.3.6"
-reqwest = { version = "0.13.1", features = ["stream"] }
+reqwest = { version = "0.13.1", features = ["stream", "blocking", "json"] }
 uuid = { version = "1.19.0", features = ["v4"] }
+nix = { version = "0.29.0", features = ["process", "signal"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dev-dependencies]
 tokio-tungstenite = "0.26.2"
+tungstenite = "0.26.2"
