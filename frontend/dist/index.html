@@ -321,9 +321,10 @@
             const container = document.getElementById('terminal');
             container.innerHTML = '';
             
+            const isMobile = window.innerWidth < 640;
             term = new Terminal({
                 cursorBlink: true,
-                fontSize: window.innerWidth < 640 ? 14 : 15,
+                fontSize: isMobile ? 14 : 15,
                 fontFamily: '"JetBrains Mono", monospace',
                 theme: { 
                     background: '#000000', 
@@ -332,6 +333,7 @@
                     selectionBackground: 'rgba(255, 255, 255, 0.3)'
                 },
                 allowProposedApi: true,
+                screenReaderMode: isMobile,
                 letterSpacing: 0.5,
                 lineHeight: 1.2,
                 cursorStyle: 'block'
@@ -393,6 +395,18 @@
             };
 
             term.open(container);
+
+            // Tối ưu hóa cho IME (Vietnamese Telex, v.v.) trên mobile
+            if (isMobile) {
+                const textarea = container.querySelector('.xterm-helper-textarea');
+                if (textarea) {
+                    // Cho phép keyboard mobile hiển thị gợi ý/Telex bằng cách bật autocorrect
+                    textarea.setAttribute('autocorrect', 'on');
+                    textarea.setAttribute('autocapitalize', 'none');
+                    textarea.setAttribute('spellcheck', 'true');
+                    textarea.setAttribute('inputmode', 'text');
+                }
+            }
 
             if (requestedRenderer === 'dom') {
                 console.log("Forcing DOM renderer");

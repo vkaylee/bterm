@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.2] - 2026-01-12
 
 ### Added
+- **Vietnamese IME Support**: Enhanced mobile terminal input by enabling `screenReaderMode` and optimizing hidden textarea attributes (`autocorrect`, `spellcheck`, `inputmode`). This allows mobile keyboards (e.g., Telex) to correctly perform character transformations for Vietnamese typing.
 - **Advanced Terminal Feature Tests**: Added a comprehensive test suite in `e2e/tests/terminal-advanced.spec.ts` to verify critical terminal functionalities.
 - **PTY Resize Verification**: End-to-end tests now confirm that PTY resizing is correctly propagated to the backend shell (verified via `stty size`).
 - **Interrupt Handling (Ctrl+C)**: Verified that special key combinations correctly interrupt running processes in the terminal.
@@ -15,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - **PTY Environment Testing**: Enhanced `src/pty_manager.rs` tests to verify `TERM`, `COLORTERM`, and `LANG` variables are correctly set in the shell environment.
 
 ### Fixed
+- **E2E Parallelism Fix**: Resolved a race condition in `mobile-ui.spec.ts` by ensuring each worker uses a unique session ID, preventing cross-test interference during high-concurrency execution.
 - **Locale-Agnostic PTY Tests**: Refactored PTY environment variable tests to be agnostic of the host's locale (e.g., handling `C.UTF-8` vs `en_US.UTF-8`), fixing failures in diverse environments.
 - **E2E Race Conditions**: Improved synchronization in advanced terminal tests by ensuring output capture is initialized before command execution, resolving intermittent timing failures.
 - **Robust Session Reconnection**: Fixed a potential error in the reload test where `window.terminalOutput` could be accessed before initialization.

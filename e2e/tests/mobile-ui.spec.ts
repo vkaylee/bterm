@@ -1,9 +1,8 @@
 import { test, expect } from '../fixtures';
 
 test.describe('Mobile UI', () => {
-  const SESSION_NAME = `mobile-test-${Date.now()}`;
-
   test.beforeEach(async ({ page }) => {
+    const SESSION_NAME = `mobile-test-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     // Emulate mobile device
     await page.setViewportSize({ width: 375, height: 667 });
     
@@ -90,6 +89,19 @@ test.describe('Mobile UI', () => {
 
     const finalHeight = await app.evaluate((el) => parseFloat(el.style.height));
     expect(finalHeight).toBe(initialHeight);
+  });
+
+  test('should enable screenReaderMode and set correct textarea attributes for IME support', async ({ page }) => {
+    // 1. Check screenReaderMode option in xterm.js
+    const screenReaderMode = await page.evaluate(() => (window as any).term.options.screenReaderMode);
+    expect(screenReaderMode).toBe(true);
+
+    // 2. Check textarea attributes (crucial for mobile Vietnamese Telex/IME)
+    const textarea = page.locator('.xterm-helper-textarea');
+    await expect(textarea).toHaveAttribute('autocorrect', 'on');
+    await expect(textarea).toHaveAttribute('autocapitalize', 'none');
+    await expect(textarea).toHaveAttribute('spellcheck', 'true');
+    await expect(textarea).toHaveAttribute('inputmode', 'text');
   });
 
   test('should handle sticky Ctrl + c combination when visible', async ({ page }) => {
