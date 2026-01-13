@@ -6,7 +6,7 @@
 - `src/api.rs`: REST API endpoints for session management (Protected by Auth).
 - `src/auth.rs`: **New** Logic for user authentication, password hashing (Argon2), and session handlers (Login/Logout/Me).
 - `src/db.rs`: **New** Database abstraction layer using **SQLite (SQLx)**. Handles user persistence and auto-migration.
-- `src/ws.rs`: WebSocket handler for terminal I/O. Connections now require a valid auth session.
+- `src/ws.rs`: WebSocket handler for terminal I/O. Connections require a valid auth session. Now supports **Initial State Sync** (history replay) and **Initial Size Handshake** for new clients.
 - **`src/session.rs`**: Session lifecycle management. Includes `SessionRegistry` and `monitor_session`.
 - **`src/pty_manager.rs`**: Direct OS interface for PTY creation and control. Includes **POSIX Process Group** management for robust cleanup of background tasks and a **Watcher Thread** safety net to handle parent process abrupt termination using `nix` and `libc`. Implements `Drop` for automatic resource deallocation.
 

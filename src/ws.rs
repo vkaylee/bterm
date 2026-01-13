@@ -53,6 +53,35 @@ async fn handle_socket(socket: WebSocket, session: Session) {
         return;
     }
 
+    // Gửi kích thước PTY hiện tại cho client mới
+    let current_pty_size = {
+        let sizes = session.client_sizes.lock().unwrap();
+        if sizes.is_empty() {
+            None
+        } else {
+            let mut min_rows = u16::MAX;
+            let mut min_cols = u16::MAX;
+            for (r, c) in sizes.values() {
+                if *r < min_rows { min_rows = *r; }
+                if *c < min_cols { min_cols = *c; }
+            }
+            if min_rows != u16::MAX && min_cols != u16::MAX {
+                Some((min_rows, min_cols))
+            } else {
+                None
+            }
+        }
+    };
+
+    if let Some((rows, cols)) = current_pty_size {
+        let msg_str = format!(r#"{{"type": "SetSize", "data": {{"rows": {rows}, "cols": {cols}}}}}"#);
+        if let Err(e) = sender.send(Message::Binary(msg_str.into_bytes().into())).await {
+            #[cfg(not(tarpaulin_include))]
+            println!("Error sending initial PTY size: {e}");
+            return;
+        }
+    }
+
     let mut rx = session.broadcast_tx.subscribe();
     let pty = session.pty_manager.clone();
     let session_clone = session.clone();
@@ -224,5 +253,53 @@ mod tests {
         // First message should be the history
         let msg = read.next().await.unwrap().unwrap();
         assert_eq!(msg.into_data().as_ref(), b"old data");
+    }
+
+    #[tokio::test]
+    async fn test_ws_initial_pty_size_sent() {
+        use tokio_tungstenite::connect_async;
+        use tokio::net::TcpListener;
+        use uuid::Uuid;
+
+        let state = setup_state().await;
+        let session_id = "size-test".to_string();
+        let session = state.registry.create_session(session_id.clone());
+        
+        // Simulate a client already connected and set PTY size
+        let existing_client_id = Uuid::new_v4();
+        let expected_rows = 30;
+        let expected_cols = 100;
+        session.update_client_size(existing_client_id, expected_rows, expected_cols);
+
+        let app = Router::new()
+            .route("/ws/{session_id}", get(ws_handler))
+            .with_state(state);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let url = format!("ws://{}/ws/{}", addr, session_id);
+        let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+        let (_, mut read) = ws_stream.split();
+
+        // New client connects. First message might be history (if any), then PTY size.
+        // For this test, we assume no history for simplicity to check size directly.
+        // In real scenario, client needs to receive history first, then size.
+        let msg = read.next().await.unwrap().unwrap();
+        
+        // This test assumes no history is sent first, so it should be the size message.
+        // If history is present, this test would need to read multiple messages.
+        // For current purpose, ensure that the size message is correctly formatted and sent.
+                
+                if let tokio_tungstenite::tungstenite::Message::Binary(bin_msg) = msg {
+                    let expected_msg = format!(r#"{{"type": "SetSize", "data": {{"rows": {}, "cols": {}}}}}"#, expected_rows, expected_cols);
+                    assert_eq!(bin_msg.as_ref(), expected_msg.as_bytes());
+                } else {
+                    panic!("Expected a Binary message for SetSize, got {:?}", msg);
+                }
     }
 }

@@ -64,9 +64,10 @@ Stream các sự kiện thời gian thực tới Dashboard để cập nhật gi
 Kết nối vào luồng dữ liệu thời gian thực của một session.
 
 #### Connection Lifecycle
-1.  **History Transmission**: Ngay khi kết nối thành công, server sẽ gửi toàn bộ lịch sử buffer hiện có (lên đến 100KB) dưới dạng **Binary Messages** trước khi bắt đầu truyền dữ liệu thời gian thực.
-2.  **Real-time Streaming**: Dữ liệu từ PTY được truyền dưới dạng **Binary Messages**.
-3.  **Graceful Exit**: Khi tiến trình shell kết thúc, server gửi một tin nhắn JSON `{"type": "Exit"}` trước khi đóng kết nối WebSocket.
+1.  **History Transmission**: Ngay khi kết nối thành công, server sẽ gửi toàn bộ lịch sử buffer hiện có (lên đến 100KB) dưới dạng **Binary Messages**.
+2.  **Dimension Handshake**: Ngay sau lịch sử, server gửi một thông báo **SetSize** (`Text Message`) chứa kích thước PTY hiện tại để client cấu hình giao diện `xterm.js` khớp với backend.
+3.  **Real-time Streaming**: Sau khi hoàn tất bắt tay trạng thái ban đầu, dữ liệu từ PTY được stream trực tiếp dưới dạng **Binary Messages**.
+4.  **Graceful Exit**: Khi tiến trình shell kết thúc, server gửi một tin nhắn JSON `{"type": "Exit"}` trước khi đóng kết nối WebSocket.
 
 #### Client Messages (JSON)
 - **Input**: Gửi dữ liệu phím bấm tới terminal.

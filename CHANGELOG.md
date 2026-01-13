@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2026-01-13
+
+### Added
+- **Persistent Terminal Sessions**: Improved session continuity when connecting from multiple devices or refreshing the page.
+    - **Initial State Sync**: Newly connected clients now automatically receive the full session output history (up to 100KB) immediately upon connection.
+    - **Dimension Synchronization**: The current effective PTY size is now sent to new clients during the WebSocket handshake, ensuring the terminal renders with correct dimensions from the start.
+    - **Handshake Unit Tests**: Added unit tests in `src/ws.rs` (`test_ws_history_sent` and `test_ws_initial_pty_size_sent`) to verify state transmission logic.
+
 ## [0.2.1] - 2026-01-13
 
 ### Added

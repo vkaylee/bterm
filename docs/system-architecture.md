@@ -98,6 +98,14 @@ BTerminal sử dụng cơ chế render 3 tầng (3-Tier Fallback) để đảm b
 - **Render Refresh:** Ép buộc Xterm.js thực hiện render cycle (`term.refresh()`) và cuộn xuống cuối (`term.scrollToBottom()`) khi nhận dữ liệu mới để tránh lỗi màn hình đen trên một số trình duyệt di động.
 - **Mobile Touch Selection:** Hỗ trợ cử chỉ nhấn giữ (Long Press - 500ms) để kích hoạt chế độ chọn văn bản trên thiết bị di động. Do terminal sử dụng Canvas/WebGL không có DOM text node thực, hệ thống sử dụng một lớp "Overlay" ẩn để giả lập vùng chọn, cho phép người dùng bôi đen và copy văn bản tự nhiên như ứng dụng native.
 
+## Session Continuity & Handshake
+
+BTerminal đảm bảo trải nghiệm liền mạch khi người dùng refresh trang hoặc truy cập từ nhiều thiết bị:
+
+1.  **History Synchronization:** Server duy trì một buffer lịch sử (tối đa 100KB) cho mỗi session. Khi một client mới kết nối via WebSocket, server sẽ gửi toàn bộ nội dung lịch sử này dưới dạng `Binary Message` trước khi bắt đầu stream dữ liệu trực tiếp. Điều này giúp terminal hiển thị trạng thái hiện tại ngay lập tức.
+2.  **Initial Size Handshake:** Trong quá trình bắt tay (handshake) WebSocket, server sẽ tính toán kích thước PTY hiện tại (dựa trên client nhỏ nhất) và gửi thông báo `SetSize` cho client mới. Điều này đảm bảo giao diện Xterm.js của client được cấu hình đúng số dòng/cột ngay từ đầu, tránh hiện tượng lệch layout.
+3.  **Graceful Recovery:** Nếu kết nối WebSocket bị ngắt, frontend sẽ tự động cố gắng kết nối lại. Do cơ chế gửi lịch sử ở bước 1, toàn bộ nội dung terminal sẽ được khôi phục nguyên vẹn sau khi re-connect.
+
 ## Deployment
 - Ứng dụng được đóng gói dưới dạng **Single Binary**.
 - Frontend (HTML/JS/CSS) và toàn bộ tài nguyên (Fonts, Libraries) được nhúng trực tiếp vào binary Rust bằng `rust-embed`.
