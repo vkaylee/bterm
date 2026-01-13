@@ -10,6 +10,7 @@ Comprehensive documentation is available in the [docs/](./docs/) directory:
 
 - [System Architecture](./docs/system-architecture.md)
 - [API Reference](./docs/api-reference.md)
+- [Deployment Guide](./docs/deployment-guide.md)
 - [Code Standards](./docs/code-standards.md)
 - [Changelog](./CHANGELOG.md)
 
