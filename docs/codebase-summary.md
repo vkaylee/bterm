@@ -27,10 +27,11 @@
 ## Testing & Quality
 - **Coverage**: **95.12% line coverage** achieved for the Rust backend.
 - `tests/sse_integration.rs`: New integration tests for SSE event streaming.
-- `e2e/tests/auth.spec.ts`: **New** Verification of login redirection, credentials validation, and session persistence.
+- `tests/password_change_integration.rs`: **New** Verification of mandatory password change flow and forbidden access enforcement.
+- `e2e/tests/auth.spec.ts`: **New** Verification of login redirection, credentials validation, session persistence, and forced password change.
 - `e2e/tests/clipboard.spec.ts`: **New** Verification of Smart Ctrl+C/V logic and clipboard permissions.
 - `e2e/tests/sync-management.spec.ts`: Verification of multi-device synchronization.
-- `e2e/tests/shared-resize.spec.ts`: **New** Verification of Max-Dimension logic (Approach C) across multiple browsers.
+- `e2e/tests/shared-resize.spec.ts`: **New** Verification of MIN-Dimension logic (Smallest Screen Priority) across multiple browsers.
 - `e2e/tests/vietnamese-ime.spec.ts`: **New** Verification of Vietnamese Telex typing without duplication.
 - `e2e/tests/terminal-layout.spec.ts`: Verification of full-screen layout and resizing.
 - `e2e/tests/terminal-advanced.spec.ts`: Advanced verification for PTY resizing, special keys (Ctrl+C), session persistence, and UTF-8 rendering.

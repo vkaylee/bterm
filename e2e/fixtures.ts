@@ -12,18 +12,25 @@ interface WorkerFixtures {
 }
 
 export const test = base.extend<{}, WorkerFixtures>({
-  server: [async ({}, use) => {
+  server: [async ({}, use, testInfo) => {
     console.log('Starting worker backend server...');
     const projectRoot = path.resolve(__dirname, '..');
+    const noAutoLogin = testInfo.title.includes('@noAutoLogin');
     
+    const env: Record<string, string> = { 
+      ...process.env, 
+      PORT: '0',
+      DATABASE_URL: 'sqlite::memory:',
+    };
+
+    if (!noAutoLogin) {
+      env.SKIP_ADMIN_PWD_CHANGE = '1';
+    }
+
     // Start backend with PORT=0 (auto-assign) and in-memory DB for isolation
     const serverProcess = spawn('cargo', ['run'], {
       cwd: projectRoot,
-      env: { 
-        ...process.env, 
-        PORT: '0',
-        DATABASE_URL: 'sqlite::memory:' 
-      },
+      env,
       stdio: ['ignore', 'pipe', 'inherit'],
     });
 
@@ -58,7 +65,7 @@ export const test = base.extend<{}, WorkerFixtures>({
       console.log(`Shutting down worker server at ${serverUrl}...`);
       serverProcess.kill();
     }
-  }, { scope: 'worker', auto: true }],
+  }, { scope: 'test', auto: true }],
 
   baseURL: async ({ server }, use, testInfo) => {
     let url = server.url;
@@ -73,23 +80,27 @@ export const test = base.extend<{}, WorkerFixtures>({
   },
 
   // Automatically login for each context
-  context: async ({ context, server }, use) => {
-    // Perform login via API
-    const apiContext = await request.newContext({ baseURL: server.url });
-    const loginResponse = await apiContext.post('/api/auth/login', {
-      data: {
-        username: 'admin',
-        password: 'admin'
+  context: async ({ context, server }, use, testInfo) => {
+    const noAutoLogin = testInfo.title.includes('@noAutoLogin');
+    
+    if (!noAutoLogin) {
+      // Perform login via API
+      const apiContext = await request.newContext({ baseURL: server.url });
+      const loginResponse = await apiContext.post('/api/auth/login', {
+        data: {
+          username: 'admin',
+          password: 'admin'
+        }
+      });
+
+      if (!loginResponse.ok()) {
+        throw new Error(`Auto-login failed: ${loginResponse.status()} ${loginResponse.statusText()}`);
       }
-    });
 
-    if (!loginResponse.ok()) {
-      throw new Error(`Auto-login failed: ${loginResponse.status()} ${loginResponse.statusText()}`);
+      // Transfer cookies to the context
+      const cookies = await apiContext.storageState();
+      await context.addCookies(cookies.cookies);
     }
-
-    // Transfer cookies to the context
-    const cookies = await apiContext.storageState();
-    await context.addCookies(cookies.cookies);
     
     await use(context);
   },

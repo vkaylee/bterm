@@ -252,7 +252,7 @@
         async function fetchSessions() {
             try {
                 const res = await fetch('/api/sessions');
-                if (res.status === 401) {
+                if (res.status === 401 || res.status === 403) {
                     window.location.href = '/login.html';
                     return;
                 }

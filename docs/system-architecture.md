@@ -34,6 +34,9 @@ BTerminal triển khai hệ thống bảo mật tự quản (self-contained) đ�
 - **Xác thực Cookie-based:** Sử dụng `tower-sessions` để quản lý trạng thái đăng nhập. Cookie được cấu hình với `HttpOnly` và `SameSite=Strict` để chống tấn công XSS và CSRF.
 - **Mã hóa Argon2id:** Mật khẩu người dùng không bao giờ được lưu dưới dạng văn bản thô. BTerminal sử dụng Argon2id (người chiến thắng Password Hashing Competition) với muối (salt) ngẫu nhiên cho mỗi user.
 - **Middleware Authorization:** Mọi request tới API quản lý session hoặc WebSocket terminal đều phải đi qua lớp middleware kiểm tra tính hợp lệ của session. Nếu không hợp lệ, hệ thống trả về mã lỗi `401 Unauthorized`.
+- **Ép đổi mật khẩu (First Login):** Hệ thống theo dõi trạng thái `must_change_password` trong database. 
+    - Nếu cờ này là `true` (mặc định cho user mới), middleware sẽ trả về `403 Forbidden` cho mọi request truy cập terminal.
+    - Giao diện đăng nhập sẽ tự động hiển thị màn hình đổi mật khẩu và chỉ cho phép tiếp tục sau khi user đã cập nhật mật khẩu mới.
 - **Database Cô lập:** Toàn bộ thông tin user và role được lưu trữ trong file SQLite (`bterminal.db`) nằm cục bộ trên server, không yêu cầu kết nối database server bên ngoài.
 
 ## Quản lý vòng đời tiến trình (Subprocess Cleanup)
@@ -80,10 +83,11 @@ BTerminal sử dụng cơ chế render 3 tầng (3-Tier Fallback) để đảm b
 ## Tối ưu hóa cho Mobile
 Để đảm bảo trải nghiệm tốt trên thiết bị di động, BTerminal thực hiện các kỹ thuật sau:
 - **Viewport Management:** Tự động điều chỉnh kích thước container ứng dụng theo `VisualViewport API`.
-- **Shared PTY Dimensions (Approach C):** Giải quyết vấn đề màn hình lớn bị co lại khi thiết bị nhỏ hơn kết nối vào. 
-    - Server duy trì danh sách kích thước mong muốn của tất cả các client.
-    - PTY luôn được thiết lập theo kích thước **lớn nhất** (MAX rows/cols) từng được yêu cầu bởi nhóm client hiện tại.
-    - Các thiết bị nhỏ hơn sẽ hiển thị terminal buffer lớn thông qua thanh cuộn (`overflow: auto`) thay vì ép PTY phải co lại.
+- **Shared PTY Dimensions (Smallest Screen Priority):** Giải quyết vấn đề mất chữ và mất dấu nhắc lệnh (prompt) trên thiết bị di động khi dùng chung session với máy tính.
+    - Server duy trì danh sách kích thước (rows/cols) của tất cả các client đang kết nối.
+    - PTY luôn được thiết lập theo kích thước **nhỏ nhất** (MIN rows/cols) trong số các client hiện tại.
+    - **Lợi ích:** Đảm bảo Shell (bash/zsh) luôn ngắt dòng (wrap) chuẩn xác cho màn hình nhỏ nhất, giúp người dùng mobile luôn thấy được nội dung mới nhất mà không cần cuộn ngang.
+    - **UI Centering:** Trên các màn hình lớn (Desktop), terminal sẽ được hiển thị ở chính giữa với vùng đệm (padding) xung quanh để duy trì tỉ lệ chuẩn của PTY.
 - **Smart Cursor Follow:** Trên mobile, giao diện tự động smooth-scroll theo vị trí con trỏ khi người dùng nhập văn bản, đảm bảo vùng làm việc luôn hiển thị ngay cả khi buffer lớn hơn màn hình.
 - **Sticky Modifiers:** Giải quyết vấn đề gõ tổ hợp phím trên mobile. Khi nhấn Ctrl/Alt trên màn hình, ứng dụng sẽ chuyển sang trạng thái "active" và đợi phím gõ tiếp theo từ bàn phím hệ thống (vd: nhấn Ctrl rồi gõ 'c' sẽ gửi mã byte `\x03`).
 - **Input Focus Preservation:** Sử dụng `event.preventDefault()` trên sự kiện `onmousedown` của các nút ảo để ngăn trình duyệt chuyển focus khỏi terminal, giúp bàn phím hệ thống luôn mở khi người dùng thao tác with phím bổ trợ.

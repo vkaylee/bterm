@@ -1,10 +1,10 @@
 import { test, expect } from '../fixtures';
 
-test.describe('Shared PTY Dimensions (Approach C)', () => {
-  test('should keep terminal size at MAX of all connected clients', async ({ context }) => {
+test.describe('Shared PTY Dimensions (Smallest Screen Priority)', () => {
+  test('should shrink terminal size to MIN of all connected clients', async ({ context }) => {
     const pageLarge = await context.newPage();
     const pageSmall = await context.newPage();
-    const SESSION_ID = `resize-sync-${Date.now()}`;
+    const SESSION_ID = `resize-sync-min-${Date.now()}`;
 
     // 1. Setup Page Large (Desktop)
     await pageLarge.setViewportSize({ width: 1000, height: 800 });
@@ -32,9 +32,11 @@ test.describe('Shared PTY Dimensions (Approach C)', () => {
     // Wait for terminal to be initialized on small page
     await pageSmall.waitForFunction(() => window.term !== null);
 
-    // 3. Verify Shared Dimensions
-    // Give some time for sync
-    await pageLarge.waitForTimeout(1000);
+    // 3. Verify Shared Dimensions (Both should be small)
+    // We wait for the large page to decrease its rows/cols
+    await pageLarge.waitForFunction((initial) => {
+      return window.term.rows < initial.rows;
+    }, sizeLargeInitial, { timeout: 15000 });
 
     const sizeLargeFinal = await pageLarge.evaluate(() => {
       return { cols: window.term.cols, rows: window.term.rows };
@@ -46,56 +48,45 @@ test.describe('Shared PTY Dimensions (Approach C)', () => {
     console.log(`Large final size: ${sizeLargeFinal.cols}x${sizeLargeFinal.rows}`);
     console.log(`Small final size: ${sizeSmallFinal.cols}x${sizeSmallFinal.rows}`);
 
-    // Large terminal should NOT have shrunk
-    expect(sizeLargeFinal.cols).toBeGreaterThanOrEqual(sizeLargeInitial.cols);
-    expect(sizeLargeFinal.rows).toBeGreaterThanOrEqual(sizeLargeInitial.rows);
+    // Large terminal should have SHRUNK to match the small one
+    expect(sizeLargeFinal.cols).toBeLessThan(sizeLargeInitial.cols);
+    expect(sizeLargeFinal.rows).toBeLessThan(sizeLargeInitial.rows);
 
-    // Small terminal should have been FORCED to the large size by the server
+    // Both should be equal to the small dimensions
     expect(sizeSmallFinal.cols).toBe(sizeLargeFinal.cols);
     expect(sizeSmallFinal.rows).toBe(sizeLargeFinal.rows);
-
-    // 4. Verify scrolling/overflow on small page
-    // Verify terminal is scrollable or at least larger than viewport (Approach C)
-    const isLargerThanViewport = await pageSmall.evaluate(() => {
-      const view = document.getElementById('terminal-view');
-      const terminal = document.getElementById('terminal');
-      return terminal.clientWidth > view.clientWidth || terminal.clientHeight > view.clientHeight ||
-             window.getComputedStyle(view).overflow === 'auto';
-    });
-    expect(isLargerThanViewport).toBe(true);
   });
 
-  test('should grow terminal size if a new larger client joins', async ({ context }) => {
-    const pageSmall = await context.newPage();
+  test('should shrink terminal size if a new smaller client joins', async ({ context }) => {
     const pageLarge = await context.newPage();
-    const SESSION_ID = `grow-sync-${Date.now()}`;
+    const pageSmall = await context.newPage();
+    const SESSION_ID = `shrink-sync-${Date.now()}`;
 
-    // 1. Small client starts session
-    await pageSmall.setViewportSize({ width: 400, height: 300 });
-    await pageSmall.goto('/');
-    await pageSmall.fill('#new-session-name', SESSION_ID);
-    await pageSmall.click('button:has-text("Create Session")');
-    await pageSmall.waitForSelector('#terminal-view', { state: 'visible' });
-
-    // Wait for terminal to be ready
-    await pageSmall.waitForFunction(() => window.term !== null && window.term.cols > 0);
-
-    const sizeSmallInitial = await pageSmall.evaluate(() => {
-      return { cols: window.term.cols, rows: window.term.rows };
-    });
-    console.log(`Small initial size: ${sizeSmallInitial.cols}x${sizeSmallInitial.rows}`);
-
-    // 2. Large client joins
+    // 1. Large client starts session
     await pageLarge.setViewportSize({ width: 1000, height: 800 });
     await pageLarge.goto('/');
-    await pageLarge.locator(`#session-list div.group:has-text("${SESSION_ID}")`).click();
-    await expect(pageLarge.locator('#terminal-view')).toBeVisible();
+    await pageLarge.fill('#new-session-name', SESSION_ID);
+    await pageLarge.click('button:has-text("Create Session")');
+    await pageLarge.waitForSelector('#terminal-view', { state: 'visible' });
 
-    // 3. Both should sync to the new MAX (Large size)
-    // We wait for the small page to increase its columns
-    await pageSmall.waitForFunction((initial) => {
-      return window.term.cols > initial.cols;
-    }, sizeSmallInitial, { timeout: 15000 });
+    // Wait for terminal to be ready
+    await pageLarge.waitForFunction(() => window.term !== null && window.term.cols > 0);
+
+    const sizeLargeInitial = await pageLarge.evaluate(() => {
+      return { cols: window.term.cols, rows: window.term.rows };
+    });
+    console.log(`Large initial size: ${sizeLargeInitial.cols}x${sizeLargeInitial.rows}`);
+
+    // 2. Small client joins
+    await pageSmall.setViewportSize({ width: 400, height: 300 });
+    await pageSmall.goto('/');
+    await pageSmall.locator(`#session-list div.group:has-text("${SESSION_ID}")`).click();
+    await expect(pageSmall.locator('#terminal-view')).toBeVisible();
+
+    // 3. Both should sync to the new MIN (Small size)
+    await pageLarge.waitForFunction((initial) => {
+      return window.term.cols < initial.cols;
+    }, sizeLargeInitial, { timeout: 15000 });
 
     const sizeSmallFinal = await pageSmall.evaluate(() => {
       return { cols: window.term.cols, rows: window.term.rows };
@@ -106,6 +97,6 @@ test.describe('Shared PTY Dimensions (Approach C)', () => {
 
     expect(sizeSmallFinal.cols).toBe(sizeLargeFinal.cols);
     expect(sizeSmallFinal.rows).toBe(sizeLargeFinal.rows);
-    expect(sizeSmallFinal.cols).toBeGreaterThan(sizeSmallInitial.cols);
+    expect(sizeLargeFinal.cols).toBeLessThan(sizeLargeInitial.cols);
   });
 });

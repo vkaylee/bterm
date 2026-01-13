@@ -17,15 +17,50 @@
 </head>
 <body>
     <div class="login-box">
-        <h2>BTerminal</h2>
-        <form id="loginForm">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Sign In</button>
-            <div class="error" id="errorMessage">Invalid credentials</div>
-        </form>
+        <div id="loginSection">
+            <h2>BTerminal</h2>
+            <form id="loginForm">
+                <input type="text" id="username" placeholder="Username" required autocomplete="username">
+                <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+                <button type="submit">Sign In</button>
+                <div class="error" id="errorMessage">Invalid credentials</div>
+            </form>
+        </div>
+
+        <div id="changePasswordSection" style="display: none">
+            <h2 style="color: #fbbf24">Security Alert</h2>
+            <p style="font-size: 0.85em; color: #94a3b8; text-align: center; margin-bottom: 20px">
+                Initial login detected. You must set a new password to continue.
+            </p>
+            <form id="changePasswordForm">
+                <input type="password" id="newPassword" placeholder="New Password" required autocomplete="new-password">
+                <input type="password" id="confirmPassword" placeholder="Confirm Password" required autocomplete="new-password">
+                <button type="submit">Update & Sign In</button>
+                <div class="error" id="changeError">Passwords do not match</div>
+            </form>
+        </div>
     </div>
     <script>
+        const loginSection = document.getElementById('loginSection');
+        const changePasswordSection = document.getElementById('changePasswordSection');
+
+        // Check current session on load
+        async function checkSession() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const user = await res.json();
+                    if (user.must_change_password) {
+                        loginSection.style.display = 'none';
+                        changePasswordSection.style.display = 'block';
+                    } else {
+                        window.location.href = '/';
+                    }
+                }
+            } catch (e) {}
+        }
+        checkSession();
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
@@ -45,9 +80,14 @@
                 });
 
                 if (res.ok) {
-                    window.location.href = '/';
+                    const user = await res.json();
+                    if (user.must_change_password) {
+                        loginSection.style.display = 'none';
+                        changePasswordSection.style.display = 'block';
+                    } else {
+                        window.location.href = '/';
+                    }
                 } else {
-                    const data = await res.json().catch(() => ({}));
                     errorMsg.textContent = 'Invalid username or password';
                     errorMsg.style.display = 'block';
                 }
@@ -57,6 +97,45 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Sign In';
+            }
+        });
+
+        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorMsg = document.getElementById('changeError');
+            const btn = e.target.querySelector('button');
+
+            if (newPassword !== confirmPassword) {
+                errorMsg.textContent = 'Passwords do not match';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: newPassword })
+                });
+
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.textContent = 'Failed to update password';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (e) {
+                errorMsg.textContent = 'Connection error';
+                errorMsg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Update & Sign In';
             }
         });
     </script>

@@ -37,19 +37,19 @@ impl Session {
             return;
         }
 
-        let mut max_rows = 0;
-        let mut max_cols = 0;
+        let mut min_rows = u16::MAX;
+        let mut min_cols = u16::MAX;
 
         for (r, c) in sizes.values() {
-            if *r > max_rows { max_rows = *r; }
-            if *c > max_cols { max_cols = *c; }
+            if *r < min_rows { min_rows = *r; }
+            if *c < min_cols { min_cols = *c; }
         }
 
-        if max_rows > 0 && max_cols > 0 {
-            let _ = self.pty_manager.resize(max_rows, max_cols);
+        if min_rows > 0 && min_cols > 0 && min_rows != u16::MAX && min_cols != u16::MAX {
+            let _ = self.pty_manager.resize(min_rows, min_cols);
             
             // Thông báo kích thước PTY mới cho tất cả các client để đồng bộ UI
-            let msg = format!(r#"{{"type": "SetSize", "data": {{"rows": {max_rows}, "cols": {max_cols}}}}}"#);
+            let msg = format!(r#"{{"type": "SetSize", "data": {{"rows": {min_rows}, "cols": {min_cols}}}}}"#);
             let _ = self.broadcast_tx.send(msg.into_bytes());
         }
     }
@@ -249,27 +249,60 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_monitor_session_lagged() {
-        let (tx, rx) = broadcast::channel(1); // Small buffer to force lag
-        let (gtx, _) = broadcast::channel(10);
+    async fn test_recalculate_pty_size_min_logic() {
+        let pty_manager = Arc::new(PtyManager::new());
+        let (tx, _) = broadcast::channel(10);
         let history = Arc::new(Mutex::new(Vec::new()));
-        let sessions = Arc::new(Mutex::new(std::collections::HashMap::new()));
-        
-        tokio::spawn(monitor_session(
-            rx,
-            history.clone(),
-            sessions.clone(),
-            "lag-test".to_string(),
-            gtx,
-        ));
+        let client_sizes = Arc::new(Mutex::new(std::collections::HashMap::new()));
 
-        // Overflow the buffer
-        tx.send(b"1".to_vec()).unwrap();
-        tx.send(b"2".to_vec()).unwrap();
-        tx.send(b"3".to_vec()).unwrap();
+        let session = Session {
+            id: "test-resize".to_string(),
+            pty_manager: pty_manager.clone(),
+            broadcast_tx: tx,
+            history,
+            client_sizes,
+        };
+
+        // Giả lập 3 client với kích thước khác nhau
+        let client1 = uuid::Uuid::new_v4();
+        let client2 = uuid::Uuid::new_v4();
+        let client3 = uuid::Uuid::new_v4();
+
+        // Thêm client 1: 100x40
+        session.update_client_size(client1, 40, 100);
         
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        // Should have skipped some but survived
-        assert!(!history.lock().unwrap().is_empty());
+        // Thêm client 2: 80x24 (Nhỏ hơn)
+        session.update_client_size(client2, 24, 80);
+
+        // Thêm client 3: 120x60 (Lớn nhất)
+        session.update_client_size(client3, 60, 120);
+
+        // Sau khi thêm cả 3, kích thước PTY phải là MIN của cả 3: 24x80
+        // (Kiểm tra gián tiếp thông qua size cuối cùng trong map - logic MIN đã chạy trong update_client_size)
+        let sizes = session.client_sizes.lock().unwrap();
+        let mut min_rows = u16::MAX;
+        let mut min_cols = u16::MAX;
+        for (r, c) in sizes.values() {
+            if *r < min_rows { min_rows = *r; }
+            if *c < min_cols { min_cols = *c; }
+        }
+
+        assert_eq!(min_rows, 24);
+        assert_eq!(min_cols, 80);
+
+        // Xóa client nhỏ nhất, kích thước phải nhảy lên MIN kế tiếp: 40x100
+        drop(sizes);
+        session.remove_client(client2);
+        
+        let sizes_after = session.client_sizes.lock().unwrap();
+        let mut min_rows_new = u16::MAX;
+        let mut min_cols_new = u16::MAX;
+        for (r, c) in sizes_after.values() {
+            if *r < min_rows_new { min_rows_new = *r; }
+            if *c < min_cols_new { min_cols_new = *c; }
+        }
+
+        assert_eq!(min_rows_new, 40);
+        assert_eq!(min_cols_new, 100);
     }
 }

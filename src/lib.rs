@@ -61,7 +61,7 @@ pub fn create_app(tx: broadcast::Sender<GlobalEvent>, registry: Arc<SessionRegis
             .route("/events", get(api::events_handler))
         )
         .route("/ws/{session_id}", get(ws::ws_handler))
-        .layer(axum::middleware::from_fn(auth::require_auth));
+        .layer(axum::middleware::from_fn_with_state(state.clone(), auth::require_auth));
 
     let auth_routes = auth::routes();
 

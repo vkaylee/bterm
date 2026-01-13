@@ -18,8 +18,9 @@ async fn main() {
     if db.get_user_by_username(admin_username).await.unwrap().is_none() {
         println!("Creating default admin user...");
         let password_hash = bterminal::auth::hash_password("admin").expect("Failed to hash password");
-        match db.create_user(admin_username, &password_hash, "admin").await {
-            Ok(_) => println!("Default admin user created (admin/admin)"),
+        let must_change = std::env::var("SKIP_ADMIN_PWD_CHANGE").is_err();
+        match db.create_user_with_pwd_policy(admin_username, &password_hash, "admin", must_change).await {
+            Ok(_) => println!("Default admin user created (admin/admin), must_change={}", must_change),
             Err(e) => println!("Failed to create admin user: {}", e),
         }
     }

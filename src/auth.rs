@@ -25,9 +25,10 @@ pub struct LoginRequest {
 
 #[derive(Serialize)]
 pub struct UserResponse {
-    id: i64,
-    username: String,
-    role: String,
+    pub id: i64,
+    pub username: String,
+    pub role: String,
+    pub must_change_password: bool,
 }
 
 impl From<User> for UserResponse {
@@ -36,8 +37,14 @@ impl From<User> for UserResponse {
             id: user.id,
             username: user.username,
             role: user.role,
+            must_change_password: user.must_change_password,
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct ChangePasswordRequest {
+    new_password: String,
 }
 
 pub fn hash_password(password: &str) -> anyhow::Result<String> {
@@ -111,16 +118,63 @@ pub async fn me(
     }
 }
 
+pub async fn change_password(
+    State(state): State<Arc<AppState>>,
+    session: Session,
+    Json(payload): Json<ChangePasswordRequest>,
+) -> impl IntoResponse {
+    let user_id: Option<i64> = match session.get(SESSION_USER_KEY).await {
+        Ok(id) => id,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Session error").into_response(),
+    };
+
+    let user_id = match user_id {
+        Some(id) => id,
+        None => return (StatusCode::UNAUTHORIZED, "Not authenticated").into_response(),
+    };
+
+    let new_hash = match hash_password(&payload.new_password) {
+        Ok(h) => h,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to hash password").into_response(),
+    };
+
+    if let Err(_) = state.db.update_password(user_id, &new_hash).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
+    }
+
+    // Get updated user
+    match state.db.get_user_by_id(user_id).await {
+        Ok(Some(user)) => (StatusCode::OK, Json(UserResponse::from(user))).into_response(),
+        Ok(None) => (StatusCode::UNAUTHORIZED, "User not found").into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
+    }
+}
+
 pub async fn require_auth(
+    State(state): State<Arc<AppState>>,
     session: Session,
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
     let user_id: Option<i64> = session.get(SESSION_USER_KEY).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    match user_id {
-        Some(_) => Ok(next.run(request).await),
-        None => Err(StatusCode::UNAUTHORIZED),
+    let user_id = match user_id {
+        Some(id) => id,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    // Check if user must change password
+    match state.db.get_user_by_id(user_id).await {
+        Ok(Some(user)) => {
+            if user.must_change_password {
+                // Allow /api/auth/change-password if it was here, but it's not.
+                // Since this middleware is only for protected_routes, we return 403.
+                return Err(StatusCode::FORBIDDEN);
+            }
+        }
+        _ => return Err(StatusCode::UNAUTHORIZED),
     }
+
+    Ok(next.run(request).await)
 }
 
 pub fn routes() -> Router<Arc<AppState>> {
@@ -128,4 +182,5 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/me", get(me))
+        .route("/change-password", post(change_password))
 }

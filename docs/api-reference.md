@@ -30,27 +30,23 @@ The actual bound address is printed to stdout upon successful startup (e.g., `�
 
 #### GET `/api/auth/me`
 Lấy thông tin của user hiện tại dựa trên session cookie.
-- **Response (200):** `{"id": 1, "username": "admin", "role": "admin"}`
+- **Response (200):** `{"id": 1, "username": "admin", "role": "admin", "must_change_password": false}`
 - **Response (401):** Chưa đăng nhập.
+
+#### POST `/api/auth/change-password`
+Cập nhật mật khẩu cho user hiện tại và reset cờ ép đổi mật khẩu.
+- **Request Body:** `{"new_password": "..."}`
+- **Response (200):** Thông tin user sau khi cập nhật (JSON).
+- **Response (401):** Unauthorized.
+- **Response (500):** Lỗi database hoặc hashing.
 
 ### Session Management
 
 ### GET `/api/sessions`
 Liệt kê tất cả các phiên làm việc hiện đang hoạt động.
 - **Response (200):** `[{"id": "work"}, {"id": "test"}]`
-- **Response (401):** Unauthorized
-
-### POST `/api/sessions`
-Tạo một phiên làm việc mới.
-- **Request Body:** `{"id": "string"}`
-- **Response (200):** `"Created"`
-- **Response (401):** Unauthorized
-
-### DELETE `/api/sessions/{id}`
-Xóa một phiên làm việc và đóng PTY process liên quan.
-- **Response (200):** OK
-- **Response (404):** Not Found
-- **Response (401):** Unauthorized
+- **Response (401):** Unauthorized.
+- **Response (403):** Forbidden (Yêu cầu đổi mật khẩu trước).
 
 ### GET `/api/events` (SSE)
 Stream các sự kiện thời gian thực tới Dashboard để cập nhật giao diện mà không cần refresh.
@@ -89,9 +85,9 @@ Kết nối vào luồng dữ liệu thời gian thực của một session.
     ```json
     {"type": "Exit"}
     ```
-  - **SetSize**: Đồng bộ kích thước PTY lớn nhất cho tất cả client.
+  - **SetSize**: Đồng bộ kích thước PTY nhỏ nhất cho tất cả client để đảm bảo không mất chữ.
     ```json
-    {"type": "SetSize", "data": {"rows": 30, "cols": 100}}
+    {"type": "SetSize", "data": {"rows": 24, "cols": 80}}
     ```
 
 ---

@@ -48,14 +48,33 @@ async fn test_auth_flow() {
     
     // Get cookie
     let headers = response.headers();
-    let cookie = headers.get("set-cookie").expect("No cookie returned").to_str().unwrap();
+    let cookie = headers.get("set-cookie").expect("No cookie returned").to_str().unwrap().to_string();
+
+    // 2.5 Change password (mandatory for new users)
+    let change_body = serde_json::to_string(&serde_json::json!({
+        "new_password": "newpassword123"
+    })).unwrap();
+
+    let response = app.clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/auth/change-password")
+                .header("cookie", &cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(change_body))
+                .unwrap()
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
 
     // 3. Success with auth
     let response = app.clone()
         .oneshot(
             Request::builder()
                 .uri("/api/sessions")
-                .header("cookie", cookie)
+                .header("cookie", &cookie)
                 .body(Body::empty())
                 .unwrap()
         )
