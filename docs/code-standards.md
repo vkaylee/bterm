@@ -25,3 +25,7 @@ Dự án BTerminal tuân thủ các tiêu chuẩn mã nguồn nghiêm ngặt đ�
   - Sử dụng `will-change: transform` và `backface-visibility: hidden` cho container terminal để kích hoạt GPU acceleration.
   - Các sự kiện scroll/resize trên viewport PHẢI được đăng ký với `{ passive: true }` và sử dụng `requestAnimationFrame` (throttling) để tránh giật lag.
 - **Resize:** Luôn sử dụng `requestAnimationFrame` trong `ResizeObserver` và gọi `term.scrollToBottom()` sau khi resize để đảm bảo con trỏ luôn nằm trong vùng nhìn thấy.
+- **Rendering Performance:** 
+  - Các thao tác cập nhật UI tần suất cao (`fit`, `scroll`) PHẢI được bọc trong `requestAnimationFrame` để đồng bộ với tốc độ quét của màn hình (60Hz).
+  - **Integer Snapping:** Kích thước (width/height) của terminal container PHẢI được làm tròn về số nguyên (`Math.floor`) để tránh hiện tượng nhòe chữ hoặc rung (shimmering) do render sub-pixel.
+  - Tránh sử dụng `will-change: transform` trừ khi thực sự cần thiết, vì nó có thể gây ra sai lệch vị trí pixel trên một số trình duyệt khi kết hợp với streaming text.

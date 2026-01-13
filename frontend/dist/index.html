@@ -25,7 +25,6 @@
         .xterm-screen { touch-action: manipulation !important; }
         #terminal { 
             background-color: black; 
-            will-change: transform;
             backface-visibility: hidden;
             touch-action: manipulation;
             margin: auto; /* Căn giữa terminal khi buffer nhỏ hơn container */
@@ -174,28 +173,48 @@
         window.ws = null;
 
         let isSyncingSize = false;
+
+        // Throttled UI updates using RequestAnimationFrame
+        let fitPending = false;
+        function throttledFit() {
+            if (fitPending || !fitAddon || !term) return;
+            fitPending = true;
+            requestAnimationFrame(() => {
+                try {
+                    fitAddon.fit();
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
+                    }
+                } catch (e) {}
+                fitPending = false;
+            });
+        }
+
+        let scrollPending = false;
+        function throttledScroll() {
+            if (scrollPending || !term) return;
+            scrollPending = true;
+            requestAnimationFrame(() => {
+                try { term.scrollToBottom(); } catch(e) {}
+                scrollPending = false;
+            });
+        }
+
         const resizeObserver = new ResizeObserver(() => {
-            if (term && fitAddon && !isSyncingSize && document.getElementById('terminal-view').style.display === 'flex') {
-                requestAnimationFrame(() => {
-                    try {
-                        const dims = fitAddon.proposeDimensions();
-                        if (dims && ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: dims.rows, cols: dims.cols } }));
-                        }
-                    } catch (e) {}
-                });
+            if (document.getElementById('terminal-view').style.display === 'flex' && !isSyncingSize) {
+                throttledFit();
             }
         });
 
         // Xử lý VisualViewport để đẩy các phím ảo lên khi bàn phím mobile xuất hiện
-        let updateTick = false;
-        function throttledUpdate() {
-            if (!updateTick) {
+        let viewportUpdateTick = false;
+        function throttledViewportUpdate() {
+            if (!viewportUpdateTick) {
                 requestAnimationFrame(() => {
                     updateVisualViewport();
-                    updateTick = false;
+                    viewportUpdateTick = false;
                 });
-                updateTick = true;
+                viewportUpdateTick = true;
             }
         }
 
@@ -225,14 +244,9 @@
                 }
                 
                 // Đảm bảo terminal được fit lại và cuộn tới cuối
-                if (term && fitAddon && !isSyncingSize) {
-                    try { 
-                        const dims = fitAddon.proposeDimensions();
-                        term.scrollToBottom();
-                        if (dims && ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'Resize', data: { rows: dims.rows, cols: dims.cols } }));
-                        }
-                    } catch(e) {}
+                if (term && !isSyncingSize) {
+                    throttledFit();
+                    throttledScroll();
                 }
             } else if (dashboard && !dashboard.classList.contains('hidden')) {
                 // Khi ở Dashboard, đảm bảo phần tử focus được nhìn thấy
@@ -245,8 +259,8 @@
         }
 
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', throttledUpdate, { passive: true });
-            window.visualViewport.addEventListener('scroll', throttledUpdate, { passive: true });
+            window.visualViewport.addEventListener('resize', throttledViewportUpdate, { passive: true });
+            window.visualViewport.addEventListener('scroll', throttledViewportUpdate, { passive: true });
         }
 
         async function fetchSessions() {
@@ -575,32 +589,16 @@
                 }
             }
             
-            // Đảm bảo terminal chiếm toàn bộ không gian
-            const doFit = () => {
-                if (!term || !fitAddon || isSyncingSize) return;
-                const container = document.getElementById('terminal');
-                if (!container || !container.offsetParent || container.clientWidth === 0) return;
-
-                try { 
-                    // Thực hiện fit thực tế để khởi tạo kích thước ban đầu phù hợp với viewport
-                    fitAddon.fit(); 
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'Resize', data: { rows: term.rows, cols: term.cols } }));
-                    }
-                } catch(e) {
-                    setTimeout(doFit, 100);
-                }
-            };
-
-            setTimeout(doFit, 50);
-            setTimeout(doFit, 300);
+            // Initial setup
+            setTimeout(throttledFit, 50);
+            setTimeout(throttledFit, 300);
 
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             ws = new WebSocket(`${protocol}//${window.location.host}/ws/${id}`);
             window.ws = ws;
             ws.binaryType = 'arraybuffer';
 
-            ws.onopen = () => { doFit(); };
+            ws.onopen = () => { throttledFit(); };
             ws.onmessage = (e) => { 
                 if (typeof e.data === 'string') {
                     try {
@@ -614,15 +612,18 @@
                                 isSyncingSize = true;
                                 term.resize(cols, rows);
                                 
-                                // Cập nhật kích thước vật lý của div terminal để hiện scrollbar nếu cần
+                                // Cập nhật kích thước vật lý (Integer Snapping)
                                 const updatePhysicalSize = () => {
                                     if (term._core && term._core._renderService && term._core._renderService.dimensions.actualCellWidth > 0) {
                                         const dims = term._core._renderService.dimensions;
                                         const terminalEl = document.getElementById('terminal');
-                                        terminalEl.style.setProperty('width', `${Math.ceil(cols * dims.actualCellWidth) + 10}px`, 'important');
-                                        terminalEl.style.setProperty('height', `${Math.ceil(rows * dims.actualCellHeight) + 10}px`, 'important');
-                                        terminalEl.style.minWidth = terminalEl.style.width;
-                                        terminalEl.style.minHeight = terminalEl.style.height;
+                                        // Sử dụng Math.floor để ép về pixel nguyên (prevent sub-pixel shimmering)
+                                        const w = Math.floor(cols * dims.actualCellWidth);
+                                        const h = Math.floor(rows * dims.actualCellHeight);
+                                        terminalEl.style.width = `${w}px`;
+                                        terminalEl.style.height = `${h}px`;
+                                        terminalEl.style.minWidth = `${w}px`;
+                                        terminalEl.style.minHeight = `${h}px`;
                                     } else {
                                         setTimeout(updatePhysicalSize, 50);
                                     }
@@ -635,6 +636,8 @@
                     } catch(err) { console.error("Parse signal error", err); }
                 } else {
                     term.write(new Uint8Array(e.data)); 
+                    // Throttled scroll after writing to avoid thrashing during streaming
+                    throttledScroll();
                 }
             };
 

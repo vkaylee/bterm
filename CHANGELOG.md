@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Auto-Redirect Logic**: Enhanced the frontend dashboard to automatically detect `401 Unauthorized` responses and redirect the user to the login page.
 - **Enhanced Centering UI**: The frontend now automatically centers and pads the terminal buffer when it is smaller than the available desktop viewport.
 - **Mandatory Password Change**: New users (including the default admin) are now forced to set a new password upon first login. Access to terminal sessions is blocked (403 Forbidden) until this change is completed.
+- **Stutter-Free Rendering**: Eliminated terminal flickering and shimmering during high-speed data streaming (e.g., Gemini CLI) by implementing `requestAnimationFrame` (RAF) throttling and **CSS Integer Snapping**.
 - **Auto-Login after Password Change**: Users are automatically redirected to the dashboard immediately after successfully updating their password for a seamless experience.
 - **Resize Logic Unit Tests**: Added comprehensive unit tests in `src/session.rs` to verify MIN logic independently.
 
